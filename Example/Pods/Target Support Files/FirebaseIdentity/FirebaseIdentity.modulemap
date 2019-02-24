@@ -1,0 +1,6 @@
+framework module FirebaseIdentity {
+  umbrella header "FirebaseIdentity-umbrella.h"
+
+  export *
+  module * { export * }
+}

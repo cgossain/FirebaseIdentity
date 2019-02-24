@@ -1,0 +1,16 @@
+PODS:
+  - FirebaseIdentity (0.1.0)
+
+DEPENDENCIES:
+  - FirebaseIdentity (from `../`)
+
+EXTERNAL SOURCES:
+  FirebaseIdentity:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  FirebaseIdentity: a49d41058fca60773634ac826524b5ee3c975adf
+
+PODFILE CHECKSUM: 3fd29bf37f527bcff7b416c6e54ed897db5668d6
+
+COCOAPODS: 1.6.0
