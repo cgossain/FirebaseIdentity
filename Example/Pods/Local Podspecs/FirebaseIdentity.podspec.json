@@ -15,8 +15,18 @@
     "git": "https://github.com/cgossain/FirebaseIdentity.git",
     "tag": "0.1.0"
   },
+  "swift_version": "4.2",
+  "static_framework": true,
   "platforms": {
-    "ios": "8.0"
+    "ios": "10.3"
   },
-  "source_files": "FirebaseIdentity/Classes/**/*"
+  "source_files": "FirebaseIdentity/Classes/**/*",
+  "dependencies": {
+    "Firebase/Core": [
+
+    ],
+    "Firebase/Auth": [
+
+    ]
+  }
 }

@@ -1,0 +1,36 @@
+//
+//  EmailIdentityProvider.swift
+//  Firebase Identity
+//
+//  Created by Christian Gossain on 2019-02-19.
+//  Copyright © 2019 MooveFit Technologies Inc. All rights reserved.
+//
+
+import Foundation
+import FirebaseAuth
+
+class EmailIdentityProvider: IdentityProvider {
+    let providerID: IdentityProviderID
+    let email: String
+    let password: String
+    
+    init(email: String, password: String) {
+        self.providerID = .email
+        self.email = email
+        self.password = password
+    }
+    
+    func signUp(completion: @escaping (AuthDataResult?, Error?) -> Void) {
+        Auth.auth().createUser(withEmail: email, password: password) { (result, error) in
+            completion(result, error)
+        }
+    }
+    
+    func signIn(completion: @escaping (AuthDataResult?, Error?) -> Void) {
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
+            completion(result, error)
+        }
+    }
+    
+}

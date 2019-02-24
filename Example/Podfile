@@ -2,10 +2,10 @@ use_frameworks!
 
 target 'FirebaseIdentity_Example' do
   pod 'FirebaseIdentity', :path => '../'
+  pod 'AppController'
 
   target 'FirebaseIdentity_Tests' do
     inherit! :search_paths
-
     
   end
 end
