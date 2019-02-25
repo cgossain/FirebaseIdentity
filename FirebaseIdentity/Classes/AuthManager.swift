@@ -9,13 +9,13 @@
 import Foundation
 import FirebaseAuth
 
-enum Result<Value, Error: Swift.Error> {
+public enum Result<Value, Error: Swift.Error> {
     case success(Value)
     case failure(Error)
 }
 
-extension Result {
-    func resolve() throws -> Value {
+public extension Result {
+    public func resolve() throws -> Value {
         switch self {
         case .success(let value):
             return value
@@ -25,14 +25,14 @@ extension Result {
     }
 }
 
-class AuthManager {
-    /// The block that is invoked when a sign-in related event completes. The parameter
-    /// passed to the block is an `AuthManager.Result` object that may indicate that a
-    /// further user action is required.
-    typealias ResultHandler<P: IdentityProvider> = (Result<AuthDataResult, AuthenticationError<P>>) -> Void
-    
+/// The block that is invoked when a sign-in related event completes. The parameter
+/// passed to the block is an `AuthManager.Result` object that may indicate that a
+/// further user action is required.
+public typealias ResultHandler<P: IdentityProvider> = (Result<AuthDataResult, AuthenticationError<P>>) -> Void
+
+public class AuthManager {
     /// The shared instance.
-    static let shared = AuthManager()
+    public static let shared = AuthManager()
     
     /// The currently authenticated user, or nil if user is not authenticated.
     private(set) var authenticatedUser: User? {
@@ -56,11 +56,10 @@ class AuthManager {
             }
         })
     }
-    
 }
 
 extension AuthManager {
-    func signUp<P: IdentityProvider>(with provider: P, completion: @escaping ResultHandler<P>) {
+    public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping ResultHandler<P>) {
         provider.signUp { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
@@ -72,7 +71,7 @@ extension AuthManager {
         }
     }
     
-    func signIn<P: IdentityProvider>(with provider: P, completion: @escaping ResultHandler<P>) {
+    public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping ResultHandler<P>) {
         provider.signIn { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
@@ -162,7 +161,7 @@ extension AuthManager {
 }
 
 extension AuthManager {
-    static func configure() {
+    public static func configure() {
         AuthManager.shared.start()
     }
 }

@@ -9,7 +9,7 @@
 import Foundation
 import FirebaseAuth
 
-protocol IdentityProvider {
+public protocol IdentityProvider {
     /// The provider ID of the receiver.
     var providerID: IdentityProviderID { get }
     
@@ -20,12 +20,12 @@ protocol IdentityProvider {
     func signIn(completion: @escaping AuthDataResultCallback)
 }
 
-struct IdentityProviderID: RawRepresentable {
+public struct IdentityProviderID: RawRepresentable {
     /// The raw Firebase auth provider ID.
-    let rawValue: String
+    public let rawValue: String
     
     /// Initializes the type with a raw Firebase auth provider ID.
-    init?(rawValue: String) {
+    public init?(rawValue: String) {
         if rawValue == EmailAuthProviderID {
             self.rawValue = EmailAuthProviderID
         }
@@ -38,18 +38,18 @@ struct IdentityProviderID: RawRepresentable {
     }
 }
 
-extension IdentityProviderID {
+public extension IdentityProviderID {
     /// The Firebase provider ID for email authentication.
-    static let email = IdentityProviderID(rawValue: EmailAuthProviderID)!
+    public static let email = IdentityProviderID(rawValue: EmailAuthProviderID)!
     
     /// The Firebase provider ID for Facebook authentication.
-    static let facebook = IdentityProviderID(rawValue: FacebookAuthProviderID)!
+    public static let facebook = IdentityProviderID(rawValue: FacebookAuthProviderID)!
 }
 
 extension IdentityProviderID: Hashable, Equatable {
-    var hashValue: Int { return rawValue.hashValue }
+    public var hashValue: Int { return rawValue.hashValue }
     
-    static func ==(lhs: IdentityProviderID, rhs: IdentityProviderID) -> Bool {
+    public static func ==(lhs: IdentityProviderID, rhs: IdentityProviderID) -> Bool {
         return lhs.rawValue == rhs.rawValue
     }
 }

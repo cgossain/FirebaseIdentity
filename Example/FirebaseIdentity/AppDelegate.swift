@@ -7,15 +7,36 @@
 //
 
 import UIKit
+import AppController
+import FBSDKCoreKit
+import Firebase
+import FirebaseIdentity
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-
+    
+    private lazy var appController: AppController = {
+        let controller = AppController(interfaceProvider: self)
+        return controller
+    }()
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        let aWindow = UIWindow()
+        self.window = aWindow
+        
+        appController.installRootViewController(in: aWindow)
+        
+        // firebase
+        FirebaseApp.configure()
+        
+        // facebook
+        FBSDKApplicationDelegate.sharedInstance().application(application, didFinishLaunchingWithOptions: launchOptions)
+        
+        // author
+        AuthManager.configure()
+        
         return true
     }
 
@@ -40,7 +61,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
-
-
+    
 }
 
+extension AppDelegate: AppControllerInterfaceProviding {
+    func configuration(for appController: AppController, traitCollection: UITraitCollection) -> AppController.Configuration {
+        return AppController.Configuration()
+    }
+    
+    func loggedOutInterfaceViewController(for appController: AppController) -> UIViewController {
+        return ViewController()
+    }
+    
+    func loggedInInterfaceViewController(for appController: AppController) -> UIViewController {
+        return ViewController()
+    }
+    
+    func isInitiallyLoggedIn(for appController: AppController) -> Bool {
+        return false
+    }
+}

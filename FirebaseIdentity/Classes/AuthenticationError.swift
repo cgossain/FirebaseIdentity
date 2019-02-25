@@ -7,26 +7,26 @@
 
 import Foundation
 
-enum AuthenticationError<P: IdentityProvider>: Error {
+public enum AuthenticationError<P: IdentityProvider>: Error {
     /// The context in which the error occurred.
-    struct Context {
-        enum AuthenticationType {
+    public struct Context {
+        public enum AuthenticationType {
             case signUp
             case signIn
         }
         
         /// The identity provider that was used to authenticate.
-        let provider: P
+        public let provider: P
         
         /// The type of authentication that was attempted.
-        let authenticationType: AuthenticationType
+        public let authenticationType: AuthenticationType
         
         /// Creates a new context with the given identity provider and authentication type.
         ///
         /// - parameters:
         ///     - provider: The identity provider that was used to authenticate.
         ///     - authenticationType: The type of authentication that was attempted.
-        init(provider: P, authenticationType: AuthenticationType) {
+        public init(provider: P, authenticationType: AuthenticationType) {
             self.provider = provider
             self.authenticationType = authenticationType
         }

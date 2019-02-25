@@ -9,24 +9,24 @@
 import Foundation
 import FirebaseAuth
 
-class EmailIdentityProvider: IdentityProvider {
-    let providerID: IdentityProviderID
-    let email: String
-    let password: String
+public class EmailIdentityProvider: IdentityProvider {
+    public let providerID: IdentityProviderID
+    public let email: String
+    public let password: String
     
-    init(email: String, password: String) {
+    public init(email: String, password: String) {
         self.providerID = .email
         self.email = email
         self.password = password
     }
     
-    func signUp(completion: @escaping (AuthDataResult?, Error?) -> Void) {
+    public func signUp(completion: @escaping (AuthDataResult?, Error?) -> Void) {
         Auth.auth().createUser(withEmail: email, password: password) { (result, error) in
             completion(result, error)
         }
     }
     
-    func signIn(completion: @escaping (AuthDataResult?, Error?) -> Void) {
+    public func signIn(completion: @escaping (AuthDataResult?, Error?) -> Void) {
         let credential = EmailAuthProvider.credential(withEmail: email, password: password)
         Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
             completion(result, error)

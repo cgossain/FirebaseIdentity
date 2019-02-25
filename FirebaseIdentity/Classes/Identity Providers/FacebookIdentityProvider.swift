@@ -9,23 +9,23 @@
 import Foundation
 import FirebaseAuth
 
-class FaceboookIdentityProvider: IdentityProvider {
-    let providerID: IdentityProviderID
-    let accessToken: String
+public class FaceboookIdentityProvider: IdentityProvider {
+    public let providerID: IdentityProviderID
+    public let accessToken: String
     
-    init(accessToken: String) {
+    public init(accessToken: String) {
         self.providerID = .facebook
         self.accessToken = accessToken
     }
     
-    func signUp(completion: @escaping AuthDataResultCallback) {
+    public func signUp(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
         Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
             completion(result, error)
         }
     }
     
-    func signIn(completion: @escaping AuthDataResultCallback) {
+    public func signIn(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
         Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
             completion(result, error)
