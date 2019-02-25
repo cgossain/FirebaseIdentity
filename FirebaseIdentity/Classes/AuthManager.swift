@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import FirebaseCore
 import FirebaseAuth
 
 public enum Result<Value, Error: Swift.Error> {
@@ -30,30 +31,39 @@ public extension Result {
 /// further user action is required.
 public typealias ResultHandler<P: IdentityProvider> = (Result<AuthDataResult, AuthenticationError<P>>) -> Void
 
+
+
 public class AuthManager {
+    public enum State {
+        case notDetermined
+        case notAuthenticated
+        case authenticated
+    }
+    
+    /// Posted on the main queue when the authentication state changes.
+    public static let authenticationStateChangedNotification = Notification.Name("firebaseidentity.authmanager.authenticationstatechangednotification")
+    
     /// The shared instance.
     public static let shared = AuthManager()
     
+    /// The authentication state of the receiver.
+    public private(set) var state = State.notDetermined
+    
     /// The currently authenticated user, or nil if user is not authenticated.
-    private(set) var authenticatedUser: User? {
-        didSet {
-//            if authenticatedUser == nil {
-//                AppController.logout()
-//            }
-//            else {
-//                AppController.login()
-//            }
-        }
-    }
+    public private(set) var authenticatedUser: User?
     
     private func start() {
         Auth.auth().addStateDidChangeListener({ (auth, user) in
             if let user = user {
                 self.authenticatedUser = user
+                self.state = .authenticated
             }
             else {
                 self.authenticatedUser = nil
+                self.state = .notAuthenticated
             }
+            
+            NotificationCenter.default.post(name: AuthManager.authenticationStateChangedNotification, object: self, userInfo: nil)
         })
     }
 }

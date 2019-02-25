@@ -21,7 +21,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let controller = AppController(interfaceProvider: self)
         return controller
     }()
-
+    
+    private var authenticationStateObserver: Any?
+    
+    
+    // MARK: - UIApplicationDelegate
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         let aWindow = UIWindow()
         self.window = aWindow
@@ -36,6 +40,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // author
         AuthManager.configure()
+        
+        // observer auth state
+        authenticationStateObserver =
+            NotificationCenter.default.addObserver(forName: AuthManager.authenticationStateChangedNotification, object: nil, queue: .main, using: { (note) in
+                guard let manager = note.object as? AuthManager else {
+                    return
+                }
+                
+                switch manager.state {
+                case .authenticated:
+                    AppController.login()
+                case .notDetermined, .notAuthenticated:
+                    AppController.logout()
+                }
+            })
         
         return true
     }
@@ -70,11 +89,11 @@ extension AppDelegate: AppControllerInterfaceProviding {
     }
     
     func loggedOutInterfaceViewController(for appController: AppController) -> UIViewController {
-        return ViewController()
+        return SignedOutViewController()
     }
     
     func loggedInInterfaceViewController(for appController: AppController) -> UIViewController {
-        return ViewController()
+        return SignedInViewController()
     }
     
     func isInitiallyLoggedIn(for appController: AppController) -> Bool {
