@@ -115,10 +115,7 @@ extension AuthManager {
                         completion(.failure(.requiresAccountLinking(providerID, context)))
                     }
                     else {
-                        // TODO: Return and error instead of auto handling?
-                        
-                        // attempt auto sign-in
-                        self.signIn(with: provider, completion: completion)
+                        completion(.failure(.emailBasedAccountAlreadyExists(context)))
                     }
                 })
             }
@@ -137,7 +134,8 @@ extension AuthManager {
                         completion(.failure(.requiresAccountLinking(providerID, context)))
                     }
                     else {
-                        completion(.failure(.other(context)))
+                        let message = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
+                        completion(.failure(.other(message, context)))
                     }
                 })
             }
@@ -164,7 +162,8 @@ extension AuthManager {
                 completion(.failure(.invalidEmailOrPassword(context)))
             }
             else {
-                completion(.failure(.other(context)))
+                let message = error.localizedDescription
+                completion(.failure(.other(message, context)))
             }
         }
     }

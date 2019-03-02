@@ -12,6 +12,21 @@ import FirebaseIdentity
 import FBSDKLoginKit
 
 class SignedOutViewController: UIViewController {
+    fileprivate var user1: FUser = {
+        let email = "cgossain@gmail.com"
+        let password = "test123"
+        let user = FUser(email: email, password: password)
+        return user
+    }()
+    
+    fileprivate var user1WrongPass: FUser = {
+        let email = "cgossain@gmail.com"
+        let password = "wrongpass"
+        let user = FUser(email: email, password: password)
+        return user
+    }()
+    
+    
     // MARK: - Lifecycle
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
@@ -51,69 +66,69 @@ class SignedOutViewController: UIViewController {
     }
     
     @objc func signIn1ButtonTapped(_ sender: UIButton) {
-//        let user1 = AuthManager.user1
-//        let provider = EmailIdentityProvider(email: user1.email, password: user1.password)
-//        AuthManager.shared.signIn(with: provider) { (result) in
-//            switch result {
-//            case .success(let value):
-//                print(value)
-//
-//            case .failure(let error):
-//                switch error {
-//                case .requiresAccountLinking(let providerID, let context):
-//                    print("Requires account linking. \(providerID) \(context)")
-//                case .invalidEmailOrPassword(let context):
-//                    print("Invalid email or password \(context)")
-//                case .other(let context):
-//                    print("Other error \(context)")
-//                }
-//            }
-//        }
+        let provider = EmailIdentityProvider(email: user1.email, password: user1.password)
+        AuthManager.shared.signIn(with: provider) { (result) in
+            switch result {
+            case .success(let value):
+                print(value)
+
+            case .failure(let error):
+                switch error {
+                case .requiresAccountLinking(let providerID, let context):
+                    print("Requires account linking. \(providerID) \(context)")
+                case .invalidEmailOrPassword(let context):
+                    print("Invalid email or password. \(context)")
+                case .emailBasedAccountAlreadyExists(let context):
+                    print("An email account already exists with this email address. \(context)")
+                case .other(let message, let context):
+                    print("\(message). \(context)")
+                }
+            }
+        }
     }
     
     @objc func signIn1WrongButtonTapped(_ sender: UIButton) {
-//        let email = "cgossain@gmail.com"
-//        let password = "wrongpass"
-//        let user1 = FUser(email: email, password: password)
-//
-//        let provider = EmailIdentityProvider(email: user1.email, password: user1.password)
-//        AuthManager.shared.signIn(with: provider) { (result) in
-//            switch result {
-//            case .success(let value):
-//                print(value)
-//
-//            case .failure(let error):
-//                switch error {
-//                case .requiresAccountLinking(let providerID, let context):
-//                    print("Requires account linking. \(providerID) \(context)")
-//                case .invalidEmailOrPassword(let context):
-//                    print("Invalid email or password \(context)")
-//                case .other(let context):
-//                    print("Other error \(context)")
-//                }
-//            }
-//        }
+        let provider = EmailIdentityProvider(email: user1WrongPass.email, password: user1WrongPass.password)
+        AuthManager.shared.signIn(with: provider) { (result) in
+            switch result {
+            case .success(let value):
+                print(value)
+
+            case .failure(let error):
+                switch error {
+                case .requiresAccountLinking(let providerID, let context):
+                    print("Requires account linking. \(providerID) \(context)")
+                case .invalidEmailOrPassword(let context):
+                    print("Invalid email or password. \(context)")
+                case .emailBasedAccountAlreadyExists(let context):
+                    print("An email account already exists with this email address. \(context)")
+                case .other(let message, let context):
+                    print("\(message). \(context)")
+                }
+            }
+        }
     }
     
     @objc func signUp1ButtonTapped(_ sender: UIButton) {
-//        let user1 = AuthManager.user1
-//        let provider = EmailIdentityProvider(email: user1.email, password: user1.password)
-//        AuthManager.shared.signUp(with: provider) { (result) in
-//            switch result {
-//            case .success(let value):
-//                print(value)
-//
-//            case .failure(let error):
-//                switch error {
-//                case .requiresAccountLinking(let providerID, let context):
-//                    print("Requires account linking. \(providerID) \(context)")
-//                case .invalidEmailOrPassword(let context):
-//                    print("Invalid email or password \(context)")
-//                case .other(let context):
-//                    print("Other error \(context)")
-//                }
-//            }
-//        }
+        let provider = EmailIdentityProvider(email: user1.email, password: user1.password)
+        AuthManager.shared.signUp(with: provider) { (result) in
+            switch result {
+            case .success(let value):
+                print(value)
+
+            case .failure(let error):
+                switch error {
+                case .requiresAccountLinking(let providerID, let context):
+                    print("Requires account linking. \(providerID) \(context)")
+                case .invalidEmailOrPassword(let context):
+                    print("Invalid email or password. \(context)")
+                case .emailBasedAccountAlreadyExists(let context):
+                    print("An email account already exists with this email address. \(context)")
+                case .other(let message, let context):
+                    print("\(message). \(context)")
+                }
+            }
+        }
     }
     
 }
@@ -139,9 +154,11 @@ extension SignedOutViewController: FBSDKLoginButtonDelegate{
                     case .requiresAccountLinking(let providerID, let context):
                         print("Requires account linking. \(providerID) \(context)")
                     case .invalidEmailOrPassword(let context):
-                        print("Invalid email or password \(context)")
-                    case .other(let context):
-                        print("Other error \(context)")
+                        print("Invalid email or password. \(context)")
+                    case .emailBasedAccountAlreadyExists(let context):
+                        print("An email account already exists with this email address. \(context)")
+                    case .other(let message, let context):
+                        print("\(message). \(context)")
                     }
                 }
             }
