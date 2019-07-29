@@ -39,7 +39,7 @@ public class AuthManager {
     }
     
     /// Posted on the main queue when the authentication state changes.
-    public static let authenticationStateChangedNotification = Notification.Name("firebaseidentity.authmanager.authenticationstatechangednotification")
+    public static let authenticationStateChangedNotification = Notification.Name("com.firebaseidentity.authmanager.authenticationstatechangednotification")
     
     /// The shared instance.
     public static let shared = AuthManager()
