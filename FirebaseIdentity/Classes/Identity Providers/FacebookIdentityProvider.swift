@@ -9,7 +9,7 @@
 import Foundation
 import FirebaseAuth
 
-public class FaceboookIdentityProvider: IdentityProvider {
+public final class FaceboookIdentityProvider: IdentityProvider {
     public let providerID: IdentityProviderID
     public let accessToken: String
     

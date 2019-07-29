@@ -9,7 +9,7 @@
 import Foundation
 import FirebaseAuth
 
-public class EmailIdentityProvider: IdentityProvider {
+public final class EmailIdentityProvider: IdentityProvider {
     public let providerID: IdentityProviderID
     public let email: String
     public let password: String
