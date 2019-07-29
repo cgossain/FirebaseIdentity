@@ -1,3 +1,4 @@
+platform :ios, '10.3'
 use_frameworks!
 
 target 'FirebaseIdentity_Example' do
@@ -7,6 +8,6 @@ target 'FirebaseIdentity_Example' do
 
   target 'FirebaseIdentity_Tests' do
     inherit! :search_paths
-    
+
   end
 end

@@ -15,7 +15,7 @@
     "git": "https://github.com/cgossain/FirebaseIdentity.git",
     "tag": "0.1.0"
   },
-  "swift_version": "4.2",
+  "swift_versions": "4.2",
   "static_framework": true,
   "platforms": {
     "ios": "10.3"
@@ -28,5 +28,6 @@
     "Firebase/Auth": [
 
     ]
-  }
+  },
+  "swift_version": "4.2"
 }

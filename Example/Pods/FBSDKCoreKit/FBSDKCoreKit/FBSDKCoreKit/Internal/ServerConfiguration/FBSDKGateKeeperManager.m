@@ -34,6 +34,9 @@
 #define FBSDK_GATEKEEPER_APP_GATEKEEPER_EDGE @"mobile_sdk_gk"
 #define FBSDK_GATEKEEPER_APP_GATEKEEPER_FIELDS @"gatekeepers"
 
+FBSDKGateKeeperKey FBSDKGateKeeperAppEventsIfAutoLogSubs = @"app_events_if_auto_log_subs";
+FBSDKGateKeeperKey FBSDKGateKeeperAppEventsKillSwitch = @"app_events_killswitch";
+
 @implementation FBSDKGateKeeperManager
 
 static NSMutableDictionary<NSString *, id> *_gateKeepers;
@@ -74,7 +77,6 @@ static BOOL _requeryFinishedForAppStart;
         _gateKeepers[appID] = gatekeeper;
       }
     }
-
     // Query the server when the requery is not finished for app start or the timestamp is not valid
     if (![self _gateKeeperIsValid]) {
       if (!_loadingGateKeepers) {
