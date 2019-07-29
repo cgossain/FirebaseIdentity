@@ -4,6 +4,7 @@ use_frameworks!
 target 'FirebaseIdentity_Example' do
   pod 'FirebaseIdentity', :path => '../'
   pod 'AppController'
+  pod 'Static'
   pod 'FBSDKLoginKit'
 
   target 'FirebaseIdentity_Tests' do

@@ -7,36 +7,70 @@
 //
 
 import UIKit
+import Static
 import Firebase
 import FirebaseIdentity
 
-class SignedInViewController: UIViewController {
+class SignedInViewController: StaticTableViewController {
+    var account: FAccount? {
+        didSet {
+            reloadSections()
+        }
+    }
+    
+    
     // MARK: - Lifecycle
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .lightContent
+    init() {
+        super.init(style: .grouped)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .green
+        title = NSLocalizedString("Settings", comment: "navigation bar title")
         
-        let signOutButton = UIButton(type: .system)
-        signOutButton.setTitle("Sign Out", for: .normal)
-        signOutButton.setTitleColor(.white, for: .normal)
-        signOutButton.addTarget(self, action: #selector(SignedInViewController.signOutButtonTapped(_:)), for: .touchUpInside)
+        guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
+            return
+        }
         
-        let stackView = UIStackView(arrangedSubviews: [signOutButton])
-        stackView.axis = .vertical
-        stackView.spacing = 20
-        
-        view.addSubview(stackView)
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                                     stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor)])
+        print(authenticatedUser.debugDescription)
+        reloadSections()
     }
     
-    @objc func signOutButtonTapped(_ sender: UIButton) {
-        try! Auth.auth().signOut()
+}
+
+fileprivate extension SignedInViewController {
+    func reloadSections() {
+        let sections = [accountSection, signOutSection]
+        dataSource.sections = sections
     }
     
+    var accountSection: Section {
+        var emailRow = Row(text: NSLocalizedString("Set Email", comment: "cell title"), cellClass: Value1Cell.self)
+        emailRow.accessory = .disclosureIndicator
+        emailRow.selection = {
+//            let accountViewController = AccountViewController()
+//            accountViewController.hidesBottomBarWhenPushed = true
+//            self.showSettingsViewController(accountViewController)
+        }
+        
+        var facebookRow = Row(text: NSLocalizedString("Facebook", comment: "cell title"), cellClass: Value1Cell.self)
+//        facebookRow.accessory = .disclosureIndicator
+        facebookRow.selection = {
+            
+        }
+        
+        return Section(header: .title("Account"), rows: [emailRow, facebookRow])
+    }
+    
+    var signOutSection: Section {
+        var signOutRow = Row(text: NSLocalizedString("Sign Out", comment: "cell title"), cellClass: Value1Cell.self)
+        signOutRow.selection = {
+            try! Auth.auth().signOut()
+        }
+        return Section(rows: [signOutRow])
+    }
 }

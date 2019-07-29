@@ -72,11 +72,13 @@ PODS:
     - nanopb/encode (= 0.3.901)
   - nanopb/decode (0.3.901)
   - nanopb/encode (0.3.901)
+  - Static (4.0.0)
 
 DEPENDENCIES:
   - AppController
   - FBSDKLoginKit
   - FirebaseIdentity (from `../`)
+  - Static
 
 SPEC REPOS:
   https://github.com/cocoapods/specs.git:
@@ -93,6 +95,7 @@ SPEC REPOS:
     - GoogleUtilities
     - GTMSessionFetcher
     - nanopb
+    - Static
 
 EXTERNAL SOURCES:
   FirebaseIdentity:
@@ -113,7 +116,8 @@ SPEC CHECKSUMS:
   GoogleUtilities: d2b0e277a95962e09bb27f5cd42f5f0b6a506c7d
   GTMSessionFetcher: 61bb0f61a4cb560030f1222021178008a5727a23
   nanopb: 2901f78ea1b7b4015c860c2fdd1ea2fee1a18d48
+  Static: 3204aad2dc648cfe08dc7aa4a26d65ee37e4853a
 
-PODFILE CHECKSUM: 4bedc0b086f532d87f352ff493cdd5a6ce2381bc
+PODFILE CHECKSUM: 4fbab498740bf03982e114e8fecfd1c345353552
 
 COCOAPODS: 1.7.5
