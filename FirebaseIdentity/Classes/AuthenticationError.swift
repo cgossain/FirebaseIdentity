@@ -33,7 +33,7 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
     }
     
     /// An indication that there the email address associated with the given identity provider is
-    /// already inmuse by another account.
+    /// already in use by another account.
     ///
     /// This case can be handled by signing into the existing account and then linking to the given
     /// identity provider credentials.
@@ -42,13 +42,13 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
     /// and context for debugging.
     case requiresAccountLinking(IdentityProviderID, AuthenticationError.Context)
     
-    /// An indication that the email or password was provided during sign-in.
+    /// An indication that an invalid email or password was provided during sign-in.
     ///
     /// As an associated value, this case contains the context for debugging.
     case invalidEmailOrPassword(AuthenticationError.Context)
     
-    /// An indication that an email based sign-up was attempted, but an email based account with the
-    /// same email address already exists.
+    /// An indication that an email based sign-up was attempted, but an email based account already
+    /// exists with the same email address.
     ///
     /// This case can be handled by attempting an auto-login. This would assume the user tried signing up
     /// with the same password that the existing account uses.
@@ -56,7 +56,7 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
     /// As an associated value, this case contains the context for debugging.
     case emailBasedAccountAlreadyExists(AuthenticationError.Context)
     
-    /// An indication that an general error has occured.
+    /// An indication that a general error has occured.
     ///
     /// As an associated value, this case contains the error text and context for debugging.
     case other(String, AuthenticationError.Context)

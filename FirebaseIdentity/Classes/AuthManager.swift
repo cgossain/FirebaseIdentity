@@ -31,8 +31,6 @@ public extension Result {
 /// further user action is required.
 public typealias ResultHandler<P: IdentityProvider> = (Result<AuthDataResult, AuthenticationError<P>>) -> Void
 
-
-
 public class AuthManager {
     public enum State {
         case notDetermined
