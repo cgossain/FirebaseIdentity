@@ -16,7 +16,7 @@ public enum Result<Value, Error: Swift.Error> {
 }
 
 public extension Result {
-    public func resolve() throws -> Value {
+    func resolve() throws -> Value {
         switch self {
         case .success(let value):
             return value
@@ -102,7 +102,7 @@ extension AuthManager {
                 // in Firebase; in other words, this error is only triggered when the user tries to sign up for
                 // an email account
                 let email = (provider as! EmailIdentityProvider).email
-                Auth.auth().fetchProviders(forEmail: email, completion: { (providers, fetchError) in
+                Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
                     // note that unless the email address passed to this method, we don't expect
                     // to run into any errors (other than typical network connection errors)
                     
@@ -117,11 +117,11 @@ extension AuthManager {
                     else {
                         completion(.failure(.emailBasedAccountAlreadyExists(context)))
                     }
-                })
+                }
             }
             else if error.code == AuthErrorCode.accountExistsWithDifferentCredential.rawValue {
                 let email =  error.userInfo[AuthErrorUserInfoEmailKey] as! String
-                Auth.auth().fetchProviders(forEmail: email, completion: { (providers, fetchError) in
+                Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
                     // note that unless the email address passed to this method, we don't expect
                     // to run into any errors (other than typical network connection errors)
                     
@@ -137,11 +137,11 @@ extension AuthManager {
                         let message = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
                         completion(.failure(.other(message, context)))
                     }
-                })
+                }
             }
             else if error.code == AuthErrorCode.wrongPassword.rawValue, provider.providerID == .email {
                 let email = (provider as! EmailIdentityProvider).email
-                Auth.auth().fetchProviders(forEmail: email, completion: { (providers, fetchError) in
+                Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
                     // note that unless the email address passed to this method, we don't expect
                     // to run into any errors (other than typical network connection errors)
                     
@@ -156,7 +156,7 @@ extension AuthManager {
                     else {
                         completion(.failure(.invalidEmailOrPassword(context))) // actually a wrong password
                     }
-                })
+                }
             }
             else if error.code == AuthErrorCode.userNotFound.rawValue {
                 completion(.failure(.invalidEmailOrPassword(context)))

@@ -20,14 +20,14 @@ public class FaceboookIdentityProvider: IdentityProvider {
     
     public func signUp(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
+        Auth.auth().signIn(with: credential) { (result, error) in
             completion(result, error)
         }
     }
     
     public func signIn(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
+        Auth.auth().signIn(with: credential) { (result, error) in
             completion(result, error)
         }
     }

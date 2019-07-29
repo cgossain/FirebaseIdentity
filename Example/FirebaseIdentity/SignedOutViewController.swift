@@ -51,9 +51,9 @@ class SignedOutViewController: UIViewController {
         signUp1Button.setTitleColor(.white, for: .normal)
         signUp1Button.addTarget(self, action: #selector(SignedOutViewController.signUp1ButtonTapped(_:)), for: .touchUpInside)
         
-        let facebookLoginButton = FBSDKLoginButton()
+        let facebookLoginButton = FBLoginButton()
         facebookLoginButton.delegate = self
-        facebookLoginButton.readPermissions = ["email"]
+        facebookLoginButton.permissions = ["email"]
         
         let stackView = UIStackView(arrangedSubviews: [signIn1Button, signIn1WrongButton, signUp1Button, facebookLoginButton])
         stackView.axis = .vertical
@@ -133,39 +133,38 @@ class SignedOutViewController: UIViewController {
     
 }
 
-extension SignedOutViewController: FBSDKLoginButtonDelegate{
-    func loginButton(_ loginButton: FBSDKLoginButton!, didCompleteWith result: FBSDKLoginManagerLoginResult!, error: Error!) {
-        if let error = error {
-            print(error.localizedDescription)
+extension SignedOutViewController: LoginButtonDelegate {
+    func loginButton(_ loginButton: FBLoginButton, didCompleteWith result: LoginManagerLoginResult?, error: Error?) {
+        guard let result = result, !result.isCancelled else {
+            if let error = error {
+                print(error.localizedDescription)
+            }
             return
         }
         
-        // continue if not cancelled
-        if !result.isCancelled {
-            let accessToken = FBSDKAccessToken.current().tokenString!
-            let provider = FaceboookIdentityProvider(accessToken: accessToken)
-            AuthManager.shared.signUp(with: provider) { (result) in
-                switch result {
-                case .success(let value):
-                    print(value)
-
-                case .failure(let error):
-                    switch error {
-                    case .requiresAccountLinking(let providerID, let context):
-                        print("Requires account linking. \(providerID) \(context)")
-                    case .invalidEmailOrPassword(let context):
-                        print("Invalid email or password. \(context)")
-                    case .emailBasedAccountAlreadyExists(let context):
-                        print("An email account already exists with this email address. \(context)")
-                    case .other(let message, let context):
-                        print("\(message). \(context)")
-                    }
+        let token = AccessToken.current!.tokenString
+        let provider = FaceboookIdentityProvider(accessToken: token)
+        AuthManager.shared.signUp(with: provider) { (result) in
+            switch result {
+            case .success(let value):
+                print(value)
+                
+            case .failure(let error):
+                switch error {
+                case .requiresAccountLinking(let providerID, let context):
+                    print("Requires account linking. \(providerID) \(context)")
+                case .invalidEmailOrPassword(let context):
+                    print("Invalid email or password. \(context)")
+                case .emailBasedAccountAlreadyExists(let context):
+                    print("An email account already exists with this email address. \(context)")
+                case .other(let message, let context):
+                    print("\(message). \(context)")
                 }
             }
         }
     }
     
-    func loginButtonDidLogOut(_ loginButton: FBSDKLoginButton!) {
+    func loginButtonDidLogOut(_ loginButton: FBLoginButton) {
         
     }
 }

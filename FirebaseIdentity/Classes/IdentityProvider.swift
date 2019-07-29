@@ -40,10 +40,10 @@ public struct IdentityProviderID: RawRepresentable {
 
 public extension IdentityProviderID {
     /// The Firebase provider ID for email authentication.
-    public static let email = IdentityProviderID(rawValue: EmailAuthProviderID)!
+    static let email = IdentityProviderID(rawValue: EmailAuthProviderID)!
     
     /// The Firebase provider ID for Facebook authentication.
-    public static let facebook = IdentityProviderID(rawValue: FacebookAuthProviderID)!
+    static let facebook = IdentityProviderID(rawValue: FacebookAuthProviderID)!
 }
 
 extension IdentityProviderID: Hashable, Equatable {

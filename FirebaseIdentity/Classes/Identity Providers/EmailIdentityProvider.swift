@@ -28,7 +28,7 @@ public class EmailIdentityProvider: IdentityProvider {
     
     public func signIn(completion: @escaping (AuthDataResult?, Error?) -> Void) {
         let credential = EmailAuthProvider.credential(withEmail: email, password: password)
-        Auth.auth().signInAndRetrieveData(with: credential) { (result, error) in
+        Auth.auth().signIn(with: credential) { (result, error) in
             completion(result, error)
         }
     }
