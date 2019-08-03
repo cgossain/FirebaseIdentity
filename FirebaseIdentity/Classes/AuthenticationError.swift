@@ -32,15 +32,15 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
         }
     }
     
-    /// An indication that there the email address associated with the given identity provider is
+    /// An indication that there the email address associated with the attempted identity provider is
     /// already in use by another account.
     ///
-    /// This case can be handled by signing into the existing account and then linking to the given
-    /// identity provider credentials.
+    /// This case can be handled by signing into the existing account using one of the auth providers specified by this
+    /// error and then linking the attempted credentials (available in the identity provider in the error context)
     ///
-    /// As associated values, this case contains the ID of the existing conflicting identity provider
-    /// and context for debugging.
-    case requiresAccountLinking(IdentityProviderID, AuthenticationError.Context)
+    /// As associated values, this case contains the list of available auth providers associated with
+    /// the existing account and context for debugging.
+    case requiresAccountLinking([IdentityProviderID], AuthenticationError.Context)
     
     /// An indication that an invalid email or password was provided during sign-in.
     ///
@@ -58,6 +58,25 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
     
     /// An indication that a general error has occured.
     ///
-    /// As an associated value, this case contains the error text and context for debugging.
+    /// As an associated value, this case contains the error message and context for debugging.
     case other(String, AuthenticationError.Context)
+}
+
+extension AuthenticationError {
+    public var localizedDescription: String {
+        switch self {
+        case .requiresAccountLinking(let providerID, let context):
+            let msg = "Requires account linking.\n\n\(providerID) \(context)"
+            return msg
+        case .invalidEmailOrPassword(let context):
+            let msg = "Invalid email or password.\n\n\(context)"
+            return msg
+        case .emailBasedAccountAlreadyExists(let context):
+            let msg = "An email account already exists with this email address.\n\n\(context)"
+            return msg
+        case .other(let message, let context):
+            let msg = "\(message).\n\n\(context)"
+            return msg
+        }
+    }
 }
