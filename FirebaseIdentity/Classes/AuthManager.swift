@@ -104,13 +104,9 @@ extension AuthManager {
                     // note that unless the email address passed to this method, we don't expect
                     // to run into any errors (other than typical network connection errors)
                     
-                    // since the app currently only support 2 providers (email, facebook), there can
-                    // only ever be a single providerID returned here, therefore we'll just access the
-                    // first item in the array
-                    
                     // get all providers that are not the one that the user just tried authenticating with
-                    if let providerID = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }).first {
-                        completion(.failure(.requiresAccountLinking(providerID, context)))
+                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
+                        completion(.failure(.requiresAccountLinking(providers, context)))
                     }
                     else {
                         completion(.failure(.emailBasedAccountAlreadyExists(context)))
@@ -123,36 +119,38 @@ extension AuthManager {
                     // note that unless the email address passed to this method, we don't expect
                     // to run into any errors (other than typical network connection errors)
                     
-                    // since the app currently only support 2 providers (email, facebook), there can
-                    // only ever be a single providerID returned here, therefore we'll just access the
-                    // first item in the array
-                    
                     // get all providers that are not the one that the user just tried authenticating with
-                    if let providerID = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }).first {
-                        completion(.failure(.requiresAccountLinking(providerID, context)))
+                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
+                        completion(.failure(.requiresAccountLinking(providers, context)))
                     }
                     else {
-                        let message = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
-                        completion(.failure(.other(message, context)))
+                        let msg = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
+                        completion(.failure(.other(msg, context)))
                     }
                 }
             }
             else if error.code == AuthErrorCode.wrongPassword.rawValue, provider.providerID == .email {
                 let email = (provider as! EmailIdentityProvider).email
                 Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
-                    // note that unless the email address passed to this method, we don't expect
-                    // to run into any errors (other than typical network connection errors)
+                    // note that unless the email address passed to this method was not provided by the
+                    // Firebase error, we don't expect to run into any errors (other than typical
+                    // network connection errors)
                     
-                    // since the app currently only support 2 providers (email, facebook), there can
-                    // only ever be a single providerID returned here, therefore we'll just access the
-                    // first item in the array
                     
                     // get all providers that are not the one that the user just tried authenticating with
-                    if let providerID = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }).first {
-                        completion(.failure(.requiresAccountLinking(providerID, context)))
+                    
+                    // note this case is a little different from the other potential account linking scenarios
+                    // in that the error could actually be a "wrong password" (reported by Firebase error), but
+                    // it may also be a situation that requires account linking (a sign in via email was attempted
+                    // even though there is no email based account, but there is an account linked to a third
+                    // party auth provider that is using the same email) - this scenario can be identified by
+                    // detecting the lack of an email based sign in method associated with this email account
+                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }), !providers.contains(.email) {
+                        let nonEmailProviders = providers.filter({ $0 != provider.providerID })
+                        completion(.failure(.requiresAccountLinking(nonEmailProviders, context)))
                     }
                     else {
-                        completion(.failure(.invalidEmailOrPassword(context))) // actually a wrong password
+                        completion(.failure(.invalidEmailOrPassword(context)))
                     }
                 }
             }
@@ -160,8 +158,8 @@ extension AuthManager {
                 completion(.failure(.invalidEmailOrPassword(context)))
             }
             else {
-                let message = error.localizedDescription
-                completion(.failure(.other(message, context)))
+                let msg = error.localizedDescription
+                completion(.failure(.other(msg, context)))
             }
         }
     }
