@@ -42,30 +42,6 @@ class SignedInViewController: StaticTableViewController {
 }
 
 fileprivate extension SignedInViewController {
-    func fetchFreshFBAuthCredential(withCompletionHandler completionHandler: ((User?, AuthCredential?) -> Void)?) {
-        if let token = AccessToken.current?.tokenString {
-            let credential = FacebookAuthProvider.credential(withAccessToken: token)
-            completionHandler?(AuthManager.shared.authenticatedUser, credential)
-        }
-        else {
-            fbLoginManager.logIn(permissions: fbPermissions, from: self) { (result, error) in
-                guard let result = result, !result.isCancelled else {
-                    if let error = error {
-                        print(error)
-                    }
-                    completionHandler?(nil, nil)
-                    return
-                }
-                
-                let token = AccessToken.current!.tokenString
-                let credential = FacebookAuthProvider.credential(withAccessToken: token)
-                completionHandler?(AuthManager.shared.authenticatedUser, credential)
-            }
-        }
-    }
-}
-
-fileprivate extension SignedInViewController {
     func reauthenticate(withCompletionHandler completionHandler: ((AuthDataResult?, Error?) -> Void)?) {
         guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
             completionHandler?(nil, nil)
@@ -104,6 +80,7 @@ fileprivate extension SignedInViewController {
                     guard let result = result, !result.isCancelled else {
                         if let error = error {
                             print(error)
+                            self.showAlert(for: error)
                         }
                         completionHandler?(nil)
                         return
@@ -123,13 +100,6 @@ fileprivate extension SignedInViewController {
 
 fileprivate extension SignedInViewController {
     func reloadSections() {
-//        // update account model
-//        if let authenticatedUser = AuthManager.shared.authenticatedUser, let email = authenticatedUser.email {
-//            account = FAccount(email: email)
-//            let emailProvider = authenticatedUser.providerData.filter({ $0.providerID == EmailAuthProviderID }).first
-//            print(emailProvider.debugDescription)
-//        }
-        
         // update data source
         let sections = [accountSection, linkedProvidersSection, signOutSection]
         dataSource.sections = sections
@@ -141,11 +111,13 @@ fileprivate extension SignedInViewController {
         emailRow.accessory = .disclosureIndicator
         emailRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Update Email", message: "Pick an email to use", preferredStyle: .actionSheet)
-            for email in AuthManager.debugEmailProviderUsers.map({ $0.email }) {
+            // eliminate duplicate emails by converting the mapped array to a Set
+            for email in Set(AuthManager.debugEmailProviderUsers.map({ $0.email })) {
                 alert.addAction(UIAlertAction(title: email, style: .default, handler: { (action) in
                     self.reauthenticate(withCompletionHandler: { (result, error) in
                         if let error = error {
                             print(error)
+                            self.showAlert(for: error)
                         }
                         else {
                             guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
@@ -158,6 +130,7 @@ fileprivate extension SignedInViewController {
                                     print(nsError.domain)
                                     print(nsError.localizedDescription)
                                     print(error!.localizedDescription)
+                                    self.showAlert(for: nsError)
                                 }
                                 else {
                                     print("Email Updated Successfully")
@@ -177,11 +150,13 @@ fileprivate extension SignedInViewController {
         passwordRow.accessory = .disclosureIndicator
         passwordRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Update Password", message: "Pick a password to use", preferredStyle: .actionSheet)
-            for password in AuthManager.debugEmailProviderUsers.map({ $0.password }) {
+            // eliminate duplicate emails by converting the mapped array to a Set
+            for password in Set(AuthManager.debugEmailProviderUsers.map({ $0.password })) {
                 alert.addAction(UIAlertAction(title: password, style: .default, handler: { (action) in
                     self.reauthenticate(withCompletionHandler: { (result, error) in
                         if let error = error {
                             print(error)
+                            self.showAlert(for: error)
                         }
                         else {
                             guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
@@ -194,6 +169,7 @@ fileprivate extension SignedInViewController {
                                     print(nsError.domain)
                                     print(nsError.localizedDescription)
                                     print(error!.localizedDescription)
+                                    self.showAlert(for: nsError)
                                 }
                                 else {
                                     print("Password Updated Successfully")

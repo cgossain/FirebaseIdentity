@@ -11,6 +11,7 @@
 		108C867C2223899D00E70F56 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 108C867B2223899D00E70F56 /* GoogleService-Info.plist */; };
 		108C867F22238A1900E70F56 /* SignedInViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108C867D22238A1900E70F56 /* SignedInViewController.swift */; };
 		108C868022238A1900E70F56 /* SignedOutViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108C867E22238A1900E70F56 /* SignedOutViewController.swift */; };
+		10A5AC7422F4E10C002924E5 /* UIViewController+Alert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10A5AC7322F4E10C002924E5 /* UIViewController+Alert.swift */; };
 		10D9241F22EF5768008E8157 /* StaticTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D9241E22EF5768008E8157 /* StaticTableViewController.swift */; };
 		10D9242422EF7472008E8157 /* FAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D9242322EF7472008E8157 /* FAccount.swift */; };
 		607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 607FACD51AFB9204008FA782 /* AppDelegate.swift */; };
@@ -36,6 +37,7 @@
 		108C867B2223899D00E70F56 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		108C867D22238A1900E70F56 /* SignedInViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SignedInViewController.swift; sourceTree = "<group>"; };
 		108C867E22238A1900E70F56 /* SignedOutViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SignedOutViewController.swift; sourceTree = "<group>"; };
+		10A5AC7322F4E10C002924E5 /* UIViewController+Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Alert.swift"; sourceTree = "<group>"; };
 		10D9241E22EF5768008E8157 /* StaticTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaticTableViewController.swift; sourceTree = "<group>"; };
 		10D9242322EF7472008E8157 /* FAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FAccount.swift; sourceTree = "<group>"; };
 		570D653BDA4170F675509DC9 /* FirebaseIdentity.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = FirebaseIdentity.podspec; path = ../FirebaseIdentity.podspec; sourceTree = "<group>"; };
@@ -138,6 +140,7 @@
 			children = (
 				108C867B2223899D00E70F56 /* GoogleService-Info.plist */,
 				607FACD51AFB9204008FA782 /* AppDelegate.swift */,
+				10A5AC7322F4E10C002924E5 /* UIViewController+Alert.swift */,
 				10D9242222EF72EE008E8157 /* View Controllers */,
 				10D9242022EF72D0008E8157 /* Abstract */,
 				10D9242122EF72DA008E8157 /* Model */,
@@ -385,6 +388,7 @@
 				607FACD61AFB9204008FA782 /* AppDelegate.swift in Sources */,
 				10D9241F22EF5768008E8157 /* StaticTableViewController.swift in Sources */,
 				102D6B952223A61E00D18527 /* FUser.swift in Sources */,
+				10A5AC7422F4E10C002924E5 /* UIViewController+Alert.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

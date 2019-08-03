@@ -14,6 +14,8 @@ import FBSDKLoginKit
 
 extension AuthManager {
     static var debugEmailProviderUsers: [FUser] = [FUser(email: "test@test.com", password: "password111"),
+                                                   FUser(email: "cgossain@gmail.com", password: "password111"),
+                                                   FUser(email: "test@test.com", password: "password222"),
                                                    FUser(email: "cgossain@gmail.com", password: "password222")]
 }
 
@@ -51,7 +53,7 @@ fileprivate extension SignedOutViewController {
         emailSignUpRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Select a User", message: nil, preferredStyle: .actionSheet)
             for user in AuthManager.debugEmailProviderUsers {
-                alert.addAction(UIAlertAction(title: user.email, style: .default, handler: { (action) in
+                alert.addAction(UIAlertAction(title: user.email+"/"+user.password, style: .default, handler: { (action) in
                     let provider = EmailIdentityProvider(email: user.email, password: user.password)
                     AuthManager.shared.signUp(with: provider) { (result) in
                         switch result {
@@ -59,16 +61,7 @@ fileprivate extension SignedOutViewController {
                             print(value)
                             
                         case .failure(let error):
-                            switch error {
-                            case .requiresAccountLinking(let providerID, let context):
-                                print("Requires account linking. \(providerID) \(context)")
-                            case .invalidEmailOrPassword(let context):
-                                print("Invalid email or password. \(context)")
-                            case .emailBasedAccountAlreadyExists(let context):
-                                print("An email account already exists with this email address. \(context)")
-                            case .other(let message, let context):
-                                print("\(message). \(context)")
-                            }
+                            self.showAuthenticationErrorAlert(for: error)
                         }
                     }
                 }))
@@ -81,7 +74,7 @@ fileprivate extension SignedOutViewController {
         emailSignInRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Select a User", message: nil, preferredStyle: .actionSheet)
             for user in AuthManager.debugEmailProviderUsers {
-                alert.addAction(UIAlertAction(title: user.email, style: .default, handler: { (action) in
+                alert.addAction(UIAlertAction(title: user.email+"/"+user.password, style: .default, handler: { (action) in
                     let provider = EmailIdentityProvider(email: user.email, password: user.password)
                     AuthManager.shared.signIn(with: provider) { (result) in
                         switch result {
@@ -89,46 +82,7 @@ fileprivate extension SignedOutViewController {
                             print(value)
                             
                         case .failure(let error):
-                            switch error {
-                            case .requiresAccountLinking(let providerID, let context):
-                                print("Requires account linking. \(providerID) \(context)")
-                            case .invalidEmailOrPassword(let context):
-                                print("Invalid email or password. \(context)")
-                            case .emailBasedAccountAlreadyExists(let context):
-                                print("An email account already exists with this email address. \(context)")
-                            case .other(let message, let context):
-                                print("\(message). \(context)")
-                            }
-                        }
-                    }
-                }))
-            }
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
-            self.present(alert, animated: true, completion: nil)
-        }
-        
-        var emailSignInWrongPasswordRow = Row(text: "Sign In with Email (wrong password)", cellClass: Value1Cell.self)
-        emailSignInWrongPasswordRow.selection = { [unowned self] in
-            let alert = UIAlertController(title: "Select a User", message: nil, preferredStyle: .actionSheet)
-            for user in AuthManager.debugEmailProviderUsers {
-                alert.addAction(UIAlertAction(title: user.email, style: .default, handler: { (action) in
-                    let provider = EmailIdentityProvider(email: user.email, password: "somewrongpasword")
-                    AuthManager.shared.signIn(with: provider) { (result) in
-                        switch result {
-                        case .success(let value):
-                            print(value)
-                            
-                        case .failure(let error):
-                            switch error {
-                            case .requiresAccountLinking(let providerID, let context):
-                                print("Requires account linking. \(providerID) \(context)")
-                            case .invalidEmailOrPassword(let context):
-                                print("Invalid email or password. \(context)")
-                            case .emailBasedAccountAlreadyExists(let context):
-                                print("An email account already exists with this email address. \(context)")
-                            case .other(let message, let context):
-                                print("\(message). \(context)")
-                            }
+                            self.showAuthenticationErrorAlert(for: error)
                         }
                     }
                 }))
@@ -144,6 +98,7 @@ fileprivate extension SignedOutViewController {
                 guard let result = result, !result.isCancelled else {
                     if let error = error {
                         print(error.localizedDescription)
+                        self.showAlert(for: error)
                     }
                     return
                 }
@@ -156,16 +111,7 @@ fileprivate extension SignedOutViewController {
                         print(value)
                         
                     case .failure(let error):
-                        switch error {
-                        case .requiresAccountLinking(let providerID, let context):
-                            print("Requires account linking. \(providerID) \(context)")
-                        case .invalidEmailOrPassword(let context):
-                            print("Invalid email or password. \(context)")
-                        case .emailBasedAccountAlreadyExists(let context):
-                            print("An email account already exists with this email address. \(context)")
-                        case .other(let message, let context):
-                            print("\(message). \(context)")
-                        }
+                        self.showAuthenticationErrorAlert(for: error)
                     }
                 }
             }
@@ -178,6 +124,7 @@ fileprivate extension SignedOutViewController {
                 guard let result = result, !result.isCancelled else {
                     if let error = error {
                         print(error.localizedDescription)
+                        self.showAlert(for: error)
                     }
                     return
                 }
@@ -190,22 +137,13 @@ fileprivate extension SignedOutViewController {
                         print(value)
                         
                     case .failure(let error):
-                        switch error {
-                        case .requiresAccountLinking(let providerID, let context):
-                            print("Requires account linking. \(providerID) \(context)")
-                        case .invalidEmailOrPassword(let context):
-                            print("Invalid email or password. \(context)")
-                        case .emailBasedAccountAlreadyExists(let context):
-                            print("An email account already exists with this email address. \(context)")
-                        case .other(let message, let context):
-                            print("\(message). \(context)")
-                        }
+                        self.showAuthenticationErrorAlert(for: error)
                     }
                 }
             }
         }
         
-        return Section(header: .title("Welcome. Please Sign Up/In"), rows: [emailSignUpRow, fbSignUpInEmailNotSharedRow, fbSignUpInEmailSharedRow, emailSignInRow, emailSignInWrongPasswordRow])
+        return Section(header: .title("Welcome. Please Sign Up/In"), rows: [emailSignUpRow, fbSignUpInEmailNotSharedRow, fbSignUpInEmailSharedRow, emailSignInRow])
     }
     
 }
