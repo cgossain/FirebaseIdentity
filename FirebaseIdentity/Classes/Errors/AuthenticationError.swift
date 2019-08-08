@@ -7,15 +7,15 @@
 
 import Foundation
 
+public enum AuthenticationType {
+    case signUp
+    case signIn
+    case reauthenticate
+}
+
 public enum AuthenticationError<P: IdentityProvider>: Error {
     /// The context in which the error occurred.
     public struct Context {
-        public enum AuthenticationType {
-            case signUp
-            case signIn
-            case reauthenticate
-        }
-        
         /// The identity provider that was used to authenticate.
         public let provider: P
         

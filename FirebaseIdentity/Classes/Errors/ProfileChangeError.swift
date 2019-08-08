@@ -54,6 +54,17 @@ public enum ProfileChangeError: Error {
     case other(String, ProfileChangeError.Context)
 }
 
+extension ProfileChangeError.Context.ProfileChangeType {
+    public var attemptedValue: String {
+        switch self {
+        case .email(let email):
+            return email
+        case .password(let password):
+            return password
+        }
+    }
+}
+
 extension ProfileChangeError {
     public var localizedDescription: String {
         switch self {

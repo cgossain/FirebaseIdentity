@@ -38,6 +38,7 @@ PODS:
   - FirebaseIdentity (0.1.0):
     - Firebase/Auth
     - Firebase/Core
+    - ProcedureKit
   - FirebaseInstanceID (4.2.2):
     - FirebaseCore (~> 6.0)
     - GoogleUtilities/Environment (~> 6.0)
@@ -72,6 +73,9 @@ PODS:
     - nanopb/encode (= 0.3.901)
   - nanopb/decode (0.3.901)
   - nanopb/encode (0.3.901)
+  - ProcedureKit (5.2.0):
+    - ProcedureKit/Standard (= 5.2.0)
+  - ProcedureKit/Standard (5.2.0)
   - Static (4.0.0)
 
 DEPENDENCIES:
@@ -95,6 +99,7 @@ SPEC REPOS:
     - GoogleUtilities
     - GTMSessionFetcher
     - nanopb
+    - ProcedureKit
     - Static
 
 EXTERNAL SOURCES:
@@ -110,12 +115,13 @@ SPEC CHECKSUMS:
   FirebaseAuth: a06ad63e9bf4c86165b54cceb1c14d4f4c38d419
   FirebaseAuthInterop: 0ffa57668be100582bb7643d4fcb7615496c41fc
   FirebaseCore: aecf02fb2274ec361b9bebeac112f5daa18273bd
-  FirebaseIdentity: e0ae344445eadbba8700908fdd38d1a35bcd3b2d
+  FirebaseIdentity: 05fb5962ade980b41872763b535e55d6ca43f544
   FirebaseInstanceID: 662b8108a09fe9ed01aafdedba100fde8536b0f6
   GoogleAppMeasurement: 183bd916af7f80deb67c01888368f1108d641832
   GoogleUtilities: d2b0e277a95962e09bb27f5cd42f5f0b6a506c7d
   GTMSessionFetcher: 61bb0f61a4cb560030f1222021178008a5727a23
   nanopb: 2901f78ea1b7b4015c860c2fdd1ea2fee1a18d48
+  ProcedureKit: deafeab083a0c5e45e4b02379e0ffa316d03db29
   Static: 3204aad2dc648cfe08dc7aa4a26d65ee37e4853a
 
 PODFILE CHECKSUM: 4fbab498740bf03982e114e8fecfd1c345353552

@@ -9,6 +9,7 @@
 import Foundation
 import FirebaseCore
 import FirebaseAuth
+import ProcedureKit
 
 public enum Result<Value, Error: Swift.Error> {
     case success(Value)
@@ -36,7 +37,7 @@ public typealias ProfileChangeHandler = (Result<Bool, ProfileChangeError>) -> Vo
 
 /// An object that provides context about the profile change that triggered the reauthentication challenge.
 public struct ProfileChangeReauthenticationChallenge {
-    let context: ProfileChangeError.Context
+    public let context: ProfileChangeError.Context
     fileprivate let completion: ProfileChangeHandler
 }
 
@@ -71,22 +72,34 @@ public class AuthManager {
     /// The currently authenticated user, or nil if user is not authenticated.
     public private(set) var authenticatedUser: User?
     
-    /// The list of identity providers associated with the currently authenticated
-    /// user. If there is no currently authenticated user, returns nil.
-    public var linkedProviders: [IdentityProviderID]? {
-        guard let authenticatedUser = authenticatedUser else {
-            return nil
-        }
-        return authenticatedUser.providerData.compactMap({ IdentityProviderID(rawValue: $0.providerID) })
+    /// The list of identity providers associated with the currently authenticated user.
+    public var linkedProviders: [IdentityProviderUserInfo] {
+        return authenticatedUser?.providerData.compactMap({
+            guard let providerID = IdentityProviderID(rawValue: $0.providerID) else {
+                return nil
+            }
+            return IdentityProviderUserInfo(providerID: providerID, email: $0.email)
+        }) ?? []
     }
     
     
     // MARK: - Private Properties
-    /// Holds a strong reference to the currently active authentication task. Since AuthenticationTask is a generic object, it cannot be fully defined here, therefore this propery is typed as an `Any`.
-    fileprivate var currentAuthenticationTask: Any?
+    /// An internal procedure queue for authentication procedures (i.e. sign-up, sign-in, reauthentication). This primary
+    /// purpose for using procedure for authentication is that it provides a way to maintain a strong reference to the
+    /// identity provider while the authentication action is in progress.
+    fileprivate var authenticationProcedureQueue: ProcedureQueue = {
+        let queue = ProcedureQueue()
+        queue.name = "com.firebaseIdentity.authManager.authenticationProcedureQueue"
+        queue.maxConcurrentOperationCount = 1
+        return queue
+    }()
     
     
     // MARK: - Lifecycle
+    public static func configure() {
+        AuthManager.shared.start()
+    }
+    
     private func start() {
         Auth.auth().addStateDidChangeListener({ (auth, user) in
             if let user = user {
@@ -104,34 +117,30 @@ public class AuthManager {
 }
 
 extension AuthManager {
-    public static func configure() {
-        AuthManager.shared.start()
-    }
-}
-
-extension AuthManager {
     public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler<P>) {
-        provider.signUp { (result, error) in
+        let p = AuthProcedure(provider: provider, authenticationType: .signUp) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
             }
             
             let context = AuthenticationError.Context(provider: provider, authenticationType: .signUp)
-            self.handleAuthResponseError(error, context: context, completion: completion)
+            self.handleAuthProcedureError(error, context: context, completion: completion)
         }
+        authenticationProcedureQueue.addOperation(p)
     }
     
     public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler<P>) {
-        provider.signIn { (result, error) in
+        let p = AuthProcedure(provider: provider, authenticationType: .signIn) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
             }
             
             let context = AuthenticationError.Context(provider: provider, authenticationType: .signIn)
-            self.handleAuthResponseError(error, context: context, completion: completion)
+            self.handleAuthProcedureError(error, context: context, completion: completion)
         }
+        authenticationProcedureQueue.addOperation(p)
     }
     
     /// If reauthentication is successful, then the profile change that previously failed is automatically retried. If reauthentication fails, the error handler will fire.
@@ -155,18 +164,19 @@ extension AuthManager {
     }
     
     private func reauthenticate<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler<P>) {
-        provider.reauthenticate { (result, error) in
+        let p = AuthProcedure(provider: provider, authenticationType: .reauthenticate) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
             }
             
             let context = AuthenticationError.Context(provider: provider, authenticationType: .reauthenticate)
-            self.handleAuthResponseError(error, context: context, completion: completion)
+            self.handleAuthProcedureError(error, context: context, completion: completion)
         }
+        authenticationProcedureQueue.addOperation(p)
     }
     
-    private func handleAuthResponseError<P: IdentityProvider>(_ error: Error, context: AuthenticationError<P>.Context, completion: @escaping AuthResultHandler<P>) {
+    private func handleAuthProcedureError<P: IdentityProvider>(_ error: Error, context: AuthenticationError<P>.Context, completion: @escaping AuthResultHandler<P>) {
         let provider = context.provider
         if let error = error as NSError? {
             if error.code == AuthErrorCode.emailAlreadyInUse.rawValue, provider.providerID == .email {
@@ -243,15 +253,19 @@ extension AuthManager {
         guard let authenticatedUser = authenticatedUser else {
             return
         }
-        
+
         authenticatedUser.updateEmail(to: email) { (error) in
             guard let error = error else {
-                completion(.success(true))
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(true))
+                })
                 return
             }
-            
+
             let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .email(email))
-            self.handleProfileChangeResponseError(error, context: context, completion: completion)
+            self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
     
@@ -262,16 +276,20 @@ extension AuthManager {
         
         authenticatedUser.updatePassword(to: password) { (error) in
             guard let error = error else {
-                completion(.success(true))
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(true))
+                })
                 return
             }
             
             let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .password(password))
-            self.handleProfileChangeResponseError(error, context: context, completion: completion)
+            self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
     
-    private func handleProfileChangeResponseError(_ error: Error, context: ProfileChangeError.Context, completion: @escaping ProfileChangeHandler) {
+    private func handleProfileChangeError(_ error: Error, context: ProfileChangeError.Context, completion: @escaping ProfileChangeHandler) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
                 if let delegate = delegate {

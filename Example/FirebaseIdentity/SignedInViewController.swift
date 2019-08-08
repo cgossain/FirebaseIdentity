@@ -37,7 +37,7 @@ class SignedInViewController: StaticTableViewController {
         
         print(authenticatedUser.debugDescription)
         
-//        AuthManager.shared.delegate = self
+        AuthManager.shared.delegate = self
         
         reloadSections()
     }
@@ -46,22 +46,33 @@ class SignedInViewController: StaticTableViewController {
 
 extension SignedInViewController: AuthManagerDelegate {
     func authManager(_ manager: AuthManager, didReceive challenge: ProfileChangeReauthenticationChallenge) {
-        let providers = manager.linkedProviders ?? []
-        if providers.contains(.email) {
-            // do email/password reauthentication if available
-            let alert = UIAlertController(title: "Reauthenticate", message: nil, preferredStyle: .actionSheet)
-            for user in AuthManager.debugEmailProviderUsers {
-                alert.addAction(UIAlertAction(title: user.email+"/"+user.password, style: .default, handler: { (action) in
-                    let provider = EmailIdentityProvider(email: user.email, password: user.password)
+        // automatically ask for reauthentication via an email provider if available, otherwise fallback to another provider
+        let prioritySequence = manager.linkedProviders.sorted { (lhs, rhs) -> Bool in return lhs.providerID == .email }
+        
+        // ask for reauthentication from the highest priority auth provider (email should be tried first if available)
+        guard let provider = prioritySequence.first else {
+            return
+        }
+        
+        if provider.providerID == .email {
+            // an email provider will always have an email associated with it, therefore it should be safe to force unwrap this value here
+            let email = provider.email!
+            
+            // present UI for user to provider their current password
+            let alert = UIAlertController(title: "Confirm Password", message: "Your current password is required to change your email address.\n\nCurrent Email: \(email)\nTarget Email:\(challenge.context.profileChangeType.attemptedValue)", preferredStyle: .actionSheet)
+            for password in Set(AuthManager.debugEmailProviderUsers.map({ $0.password })) {
+                alert.addAction(UIAlertAction(title: password, style: .default, handler: { (action) in
+                    let provider = EmailIdentityProvider(email: email, password: password)
                     manager.reauthenticate(with: provider, for: challenge, errorHandler: { (error) in
                         self.showAuthenticationErrorAlert(for: error)
                     })
                 }))
             }
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
             self.present(alert, animated: true, completion: nil)
         }
-        else if providers.contains(.facebook) {
-            // then try facebook if available
+        else if provider.providerID == .facebook {
             fetchFacebookAccessTokenForReauthentication { (token) in
                 guard let token = token else {
                     return
@@ -100,13 +111,8 @@ fileprivate extension SignedInViewController {
 
 fileprivate extension SignedInViewController {
     func reloadSections() {
-        // update data source
-        AuthManager.shared.authenticatedUser?.reload(completion: { (error) in
-            DispatchQueue.main.async {
-                let sections = [self.accountSection, self.linkedProvidersSection, self.signOutSection]
-                self.dataSource.sections = sections
-            }
-        })
+        let sections = [self.accountSection, self.linkedProvidersSection, self.signOutSection]
+        self.dataSource.sections = sections
     }
     
     var accountSection: Section {
