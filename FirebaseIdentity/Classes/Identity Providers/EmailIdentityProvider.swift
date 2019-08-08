@@ -20,17 +20,22 @@ public final class EmailIdentityProvider: IdentityProvider {
         self.password = password
     }
     
-    public func signUp(completion: @escaping (AuthDataResult?, Error?) -> Void) {
-        Auth.auth().createUser(withEmail: email, password: password) { (result, error) in
-            completion(result, error)
-        }
+    public func signUp(completion: @escaping AuthDataResultCallback) {
+        Auth.auth().createUser(withEmail: email, password: password, completion: completion)
     }
     
-    public func signIn(completion: @escaping (AuthDataResult?, Error?) -> Void) {
+    public func signIn(completion: @escaping AuthDataResultCallback) {
         let credential = EmailAuthProvider.credential(withEmail: email, password: password)
-        Auth.auth().signIn(with: credential) { (result, error) in
-            completion(result, error)
-        }
+        Auth.auth().signIn(with: credential, completion: completion)
     }
     
+    public func reauthenticate(completion: @escaping AuthDataResultCallback) {
+        if let currentUser = Auth.auth().currentUser {
+            let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+            currentUser.reauthenticate(with: credential, completion: completion)
+        }
+        else {
+            completion(nil, nil)
+        }
+    }
 }

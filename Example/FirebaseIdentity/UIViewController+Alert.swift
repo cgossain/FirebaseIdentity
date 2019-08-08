@@ -23,6 +23,12 @@ extension UIViewController {
         present(alert, animated: true, completion: nil)
     }
     
+    func showProfileChangeErrorAlert(for error: ProfileChangeError) {
+        let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        present(alert, animated: true, completion: nil)
+    }
+    
     func showAuthenticationErrorAlert<P: IdentityProvider>(for error: AuthenticationError<P>) {
         let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))

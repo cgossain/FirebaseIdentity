@@ -13,6 +13,7 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
         public enum AuthenticationType {
             case signUp
             case signIn
+            case reauthenticate
         }
         
         /// The identity provider that was used to authenticate.
@@ -55,10 +56,10 @@ public enum AuthenticationError<P: IdentityProvider>: Error {
     ///
     /// As an associated value, this case contains the context for debugging.
     case emailBasedAccountAlreadyExists(AuthenticationError.Context)
-    
+        
     /// An indication that a general error has occured.
     ///
-    /// As an associated value, this case contains the error message and context for debugging.
+    /// As associated values, this case contains the error message and context for debugging.
     case other(String, AuthenticationError.Context)
 }
 

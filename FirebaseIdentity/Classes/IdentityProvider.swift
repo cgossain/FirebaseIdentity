@@ -18,4 +18,10 @@ public protocol IdentityProvider {
     
     /// Starts the identity providers sign in routine.
     func signIn(completion: @escaping AuthDataResultCallback)
+    
+    /// Reauthenticates the cached current user, with the receivers credentials.
+    func reauthenticate(completion: @escaping AuthDataResultCallback)
+    
+//    /// Starts the identity providers link routine. Must be signed in to a Firebase account.
+//    func link(completion: @escaping AuthDataResultCallback)
 }

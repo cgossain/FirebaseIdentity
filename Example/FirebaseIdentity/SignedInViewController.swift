@@ -36,64 +36,64 @@ class SignedInViewController: StaticTableViewController {
         }
         
         print(authenticatedUser.debugDescription)
+        
+//        AuthManager.shared.delegate = self
+        
         reloadSections()
     }
     
 }
 
-fileprivate extension SignedInViewController {
-    func reauthenticate(withCompletionHandler completionHandler: ((AuthDataResult?, Error?) -> Void)?) {
-        guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
-            completionHandler?(nil, nil)
-            return
-        }
-        
-        fetchCredentialForReauthentication { (credential) in
-            guard let credential = credential else {
-                completionHandler?(nil, nil)
-                return
+extension SignedInViewController: AuthManagerDelegate {
+    func authManager(_ manager: AuthManager, didReceive challenge: ProfileChangeReauthenticationChallenge) {
+        let providers = manager.linkedProviders ?? []
+        if providers.contains(.email) {
+            // do email/password reauthentication if available
+            let alert = UIAlertController(title: "Reauthenticate", message: nil, preferredStyle: .actionSheet)
+            for user in AuthManager.debugEmailProviderUsers {
+                alert.addAction(UIAlertAction(title: user.email+"/"+user.password, style: .default, handler: { (action) in
+                    let provider = EmailIdentityProvider(email: user.email, password: user.password)
+                    manager.reauthenticate(with: provider, for: challenge, errorHandler: { (error) in
+                        self.showAuthenticationErrorAlert(for: error)
+                    })
+                }))
             }
-            authenticatedUser.reauthenticate(with: credential, completion: completionHandler)
+            self.present(alert, animated: true, completion: nil)
+        }
+        else if providers.contains(.facebook) {
+            // then try facebook if available
+            fetchFacebookAccessTokenForReauthentication { (token) in
+                guard let token = token else {
+                    return
+                }
+                let provider = FaceboookIdentityProvider(accessToken: token)
+                manager.reauthenticate(with: provider, for: challenge, errorHandler: { (error) in
+                    self.showAuthenticationErrorAlert(for: error)
+                })
+            }
         }
     }
-    
-    func fetchCredentialForReauthentication(withCompletionHandler completionHandler: ((AuthCredential?) -> Void)?) {
-        guard let providerForReauthentication = AuthManager.shared.linkedProviders?.first else {
-            completionHandler?(nil)
-            return
+}
+
+fileprivate extension SignedInViewController {
+    func fetchFacebookAccessTokenForReauthentication(withCompletionHandler completionHandler: ((String?) -> Void)?) {
+        if let token = AccessToken.current?.tokenString {
+            completionHandler?(token)
         }
-        
-        switch providerForReauthentication {
-        case .email:
-            // FIXME: need to ask user to pick
-            let user1 = AuthManager.debugEmailProviderUsers[0]
-            let credential = EmailAuthProvider.credential(withEmail: user1.email, password: user1.password)
-            completionHandler?(credential)
-            
-        case .facebook:
-            if let token = AccessToken.current?.tokenString {
-                let credential = FacebookAuthProvider.credential(withAccessToken: token)
-                completionHandler?(credential)
-            }
-            else {
-                fbLoginManager.logIn(permissions: fbPermissions, from: self) { (result, error) in
-                    guard let result = result, !result.isCancelled else {
-                        if let error = error {
-                            print(error)
-                            self.showAlert(for: error)
-                        }
-                        completionHandler?(nil)
-                        return
+        else {
+            fbLoginManager.logIn(permissions: fbPermissions, from: self) { (result, error) in
+                guard let result = result, !result.isCancelled else {
+                    if let error = error {
+                        print(error)
+                        self.showAlert(for: error)
                     }
-                    
-                    let token = AccessToken.current!.tokenString
-                    let credential = FacebookAuthProvider.credential(withAccessToken: token)
-                    completionHandler?(credential)
+                    completionHandler?(nil)
+                    return
                 }
+                
+                let token = AccessToken.current!.tokenString
+                completionHandler?(token)
             }
-            
-        default:
-            completionHandler?(nil)
         }
     }
 }
@@ -101,8 +101,12 @@ fileprivate extension SignedInViewController {
 fileprivate extension SignedInViewController {
     func reloadSections() {
         // update data source
-        let sections = [accountSection, linkedProvidersSection, signOutSection]
-        dataSource.sections = sections
+        AuthManager.shared.authenticatedUser?.reload(completion: { (error) in
+            DispatchQueue.main.async {
+                let sections = [self.accountSection, self.linkedProvidersSection, self.signOutSection]
+                self.dataSource.sections = sections
+            }
+        })
     }
     
     var accountSection: Section {
@@ -114,29 +118,16 @@ fileprivate extension SignedInViewController {
             // eliminate duplicate emails by converting the mapped array to a Set
             for email in Set(AuthManager.debugEmailProviderUsers.map({ $0.email })) {
                 alert.addAction(UIAlertAction(title: email, style: .default, handler: { (action) in
-                    self.reauthenticate(withCompletionHandler: { (result, error) in
-                        if let error = error {
-                            print(error)
-                            self.showAlert(for: error)
-                        }
-                        else {
-                            guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
-                                return
+                    AuthManager.shared.updateEmail(to: email, completion: { (result) in
+                        switch result {
+                        case .success(let value):
+                            DispatchQueue.main.async {
+                                print("Email Updated Successfully: \(value)")
+                                self.reloadSections()
                             }
                             
-                            authenticatedUser.updateEmail(to: email, completion: { (error) in
-                                if let nsError = error as NSError? {
-                                    print(nsError.code)
-                                    print(nsError.domain)
-                                    print(nsError.localizedDescription)
-                                    print(error!.localizedDescription)
-                                    self.showAlert(for: nsError)
-                                }
-                                else {
-                                    print("Email Updated Successfully")
-                                    self.reloadSections()
-                                }
-                            })
+                        case .failure(let error):
+                            self.showProfileChangeErrorAlert(for: error)
                         }
                     })
                 }))
@@ -153,29 +144,16 @@ fileprivate extension SignedInViewController {
             // eliminate duplicate emails by converting the mapped array to a Set
             for password in Set(AuthManager.debugEmailProviderUsers.map({ $0.password })) {
                 alert.addAction(UIAlertAction(title: password, style: .default, handler: { (action) in
-                    self.reauthenticate(withCompletionHandler: { (result, error) in
-                        if let error = error {
-                            print(error)
-                            self.showAlert(for: error)
-                        }
-                        else {
-                            guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
-                                return
+                    AuthManager.shared.updatePassword(to: password, completion: { (result) in
+                        switch result {
+                        case .success(let value):
+                            DispatchQueue.main.async {
+                                print("Password Updated Successfully: \(value)")
+                                self.reloadSections()
                             }
                             
-                            authenticatedUser.updatePassword(to: password, completion: { (error) in
-                                if let nsError = error as NSError? {
-                                    print(nsError.code)
-                                    print(nsError.domain)
-                                    print(nsError.localizedDescription)
-                                    print(error!.localizedDescription)
-                                    self.showAlert(for: nsError)
-                                }
-                                else {
-                                    print("Password Updated Successfully")
-                                    self.reloadSections()
-                                }
-                            })
+                        case .failure(let error):
+                            self.showProfileChangeErrorAlert(for: error)
                         }
                     })
                 }))
@@ -185,7 +163,41 @@ fileprivate extension SignedInViewController {
             self.present(alert, animated: true, completion: nil)
         }
         
-        return Section(header: .title("Account"), rows: [emailRow, passwordRow])
+        var linkEmailRow = Row(text: NSLocalizedString("Link Email", comment: "cell title"), cellClass: Value1Cell.self)
+        linkEmailRow.accessory = .disclosureIndicator
+        linkEmailRow.selection = { [unowned self] in
+            self.reloadSections()
+            
+//            let alert = UIAlertController(title: "Link Email", message: "Pick an email to use", preferredStyle: .actionSheet)
+//            // eliminate duplicate emails by converting the mapped array to a Set
+//            for user in AuthManager.debugEmailProviderUsers {
+//                alert.addAction(UIAlertAction(title: user.email+"/"+user.password, style: .default, handler: { (action) in
+//                    guard let authenticatedUser = AuthManager.shared.authenticatedUser else {
+//                        return
+//                    }
+//
+//                    let credential = EmailAuthProvider.credential(withEmail: user.email, password: user.password)
+//                    authenticatedUser.link(with: credential, completion: { (result, error) in
+//                        if let nsError = error as NSError? {
+//                            print(nsError.code)
+//                            print(nsError.domain)
+//                            print(nsError.localizedDescription)
+//                            print(error!.localizedDescription)
+//                            self.showAlert(for: nsError)
+//                        }
+//                        else {
+//                            print("Email Credential Linked Successfully")
+//                            self.reloadSections()
+//                        }
+//                    })
+//                }))
+//            }
+//
+//            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+//            self.present(alert, animated: true, completion: nil)
+        }
+        
+        return Section(header: .title("Account"), rows: [emailRow, passwordRow, linkEmailRow])
     }
     
     var linkedProvidersSection: Section {

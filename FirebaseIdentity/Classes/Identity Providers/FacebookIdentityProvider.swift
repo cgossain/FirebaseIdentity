@@ -9,7 +9,7 @@
 import Foundation
 import FirebaseAuth
 
-public final class FaceboookIdentityProvider: IdentityProvider {
+public final class FaceboookIdentityProvider: IdentityProvider {    
     public let providerID: IdentityProviderID
     public let accessToken: String
     
@@ -20,15 +20,21 @@ public final class FaceboookIdentityProvider: IdentityProvider {
     
     public func signUp(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        Auth.auth().signIn(with: credential) { (result, error) in
-            completion(result, error)
-        }
+        Auth.auth().signIn(with: credential, completion: completion)
     }
     
     public func signIn(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        Auth.auth().signIn(with: credential) { (result, error) in
-            completion(result, error)
+        Auth.auth().signIn(with: credential, completion: completion)
+    }
+    
+    public func reauthenticate(completion: @escaping AuthDataResultCallback) {
+        if let currentUser = Auth.auth().currentUser {
+            let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
+            currentUser.reauthenticate(with: credential, completion: completion)
+        }
+        else {
+            completion(nil, nil)
         }
     }
 }

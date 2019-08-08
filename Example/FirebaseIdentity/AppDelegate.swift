@@ -48,7 +48,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                     return
                 }
                 
-                switch manager.state {
+                switch manager.authenticationState {
                 case .authenticated:
                     AppController.login()
                 case .notDetermined, .notAuthenticated:
