@@ -55,7 +55,9 @@ extension SignedInViewController: AuthManagerDelegate {
         }
         
         if provider.providerID == .email {
-            // an email provider will always have an email associated with it, therefore it should be safe to force unwrap this value here
+            // an email provider will always have an email associated with it, therefore it should be safe to force unwrap this value here;
+            // what if there is some kind of error that causes the email to be non-existant in this scenario? Force the user to log-out, then back in?
+            // it seems like it would be impossible for the email to not exist on an email auth provider
             let email = provider.email!
             
             // present UI for user to provider their current password
