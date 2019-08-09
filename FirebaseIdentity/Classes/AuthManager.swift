@@ -30,10 +30,13 @@ public extension Result {
 /// The block that is invoked when an authentication related event completes. The parameter
 /// passed to the block is an `AuthManager.Result` object that may indicate that a
 /// further user action is required.
-public typealias AuthResultHandler<P: IdentityProvider> = (Result<AuthDataResult, AuthenticationError<P>>) -> Void
+public typealias AuthResultHandler = (Result<AuthDataResult, AuthenticationError>) -> Void
+
+/// The block that is invoked when a provider unlink event completes.
+public typealias AuthUnlinkHandler = (Result<User, Error>) -> Void
 
 /// The block that is invoked when a profile change event completes.
-public typealias ProfileChangeHandler = (Result<Bool, ProfileChangeError>) -> Void
+public typealias ProfileChangeHandler = (Result<User, ProfileChangeError>) -> Void
 
 /// An object that provides context about the profile change that triggered the reauthentication challenge.
 public struct ProfileChangeReauthenticationChallenge {
@@ -117,34 +120,33 @@ public class AuthManager {
 }
 
 extension AuthManager {
-    public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler<P>) {
-        let p = AuthProcedure(provider: provider, authenticationType: .signUp) { (result, error) in
+    public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
+        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .signUp) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
             }
             
-            let context = AuthenticationError.Context(provider: provider, authenticationType: .signUp)
-            self.handleAuthProcedureError(error, context: context, completion: completion)
-        }
-        authenticationProcedureQueue.addOperation(p)
+            let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .signUp)
+            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+        })
     }
     
-    public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler<P>) {
-        let p = AuthProcedure(provider: provider, authenticationType: .signIn) { (result, error) in
+    public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
+        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .signIn) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
             }
             
-            let context = AuthenticationError.Context(provider: provider, authenticationType: .signIn)
-            self.handleAuthProcedureError(error, context: context, completion: completion)
-        }
-        authenticationProcedureQueue.addOperation(p)
+            let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .signIn)
+            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+        })
     }
     
-    /// If reauthentication is successful, then the profile change that previously failed is automatically retried. If reauthentication fails, the error handler will fire.
-    public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, errorHandler: @escaping (AuthenticationError<P>) -> Void) {
+    /// If reauthentication is successful, then the profile change that previously failed is automatically
+    /// retried. If reauthentication fails, the error handler will fire.
+    public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, errorHandler: @escaping (AuthenticationError) -> Void) {
         self.reauthenticate(with: provider) { (result) in
             switch result {
             case .success(_):
@@ -155,6 +157,9 @@ extension AuthManager {
                     
                 case .password(let password):
                     self.updatePassword(to: password, completion: challenge.completion)
+                    
+                case .unlinkProvider(_):
+                    break // not retryable
                 }
                 
             case .failure(let error):
@@ -163,21 +168,31 @@ extension AuthManager {
         }
     }
     
-    private func reauthenticate<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler<P>) {
-        let p = AuthProcedure(provider: provider, authenticationType: .reauthenticate) { (result, error) in
+    public func linkWith<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
+        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .linkProvider) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
             }
             
-            let context = AuthenticationError.Context(provider: provider, authenticationType: .reauthenticate)
-            self.handleAuthProcedureError(error, context: context, completion: completion)
-        }
-        authenticationProcedureQueue.addOperation(p)
+            let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .linkProvider)
+            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+        })
     }
     
-    private func handleAuthProcedureError<P: IdentityProvider>(_ error: Error, context: AuthenticationError<P>.Context, completion: @escaping AuthResultHandler<P>) {
-        let provider = context.provider
+    private func reauthenticate<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
+        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .reauthenticate) { (result, error) in
+            guard let error = error else {
+                completion(.success(result!))
+                return
+            }
+            
+            let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .reauthenticate)
+            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+        })
+    }
+    
+    private func handleAuthProcedureError<P: IdentityProvider>(_ error: Error, context: AuthenticationError.Context, provider: P, completion: @escaping AuthResultHandler) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.emailAlreadyInUse.rawValue, provider.providerID == .email {
                 // this error is only ever is specifically triggered when using the "createUserWithEmail" method
@@ -194,22 +209,6 @@ extension AuthManager {
                     }
                     else {
                         completion(.failure(.emailBasedAccountAlreadyExists(context)))
-                    }
-                }
-            }
-            else if error.code == AuthErrorCode.accountExistsWithDifferentCredential.rawValue {
-                let email =  error.userInfo[AuthErrorUserInfoEmailKey] as! String
-                Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
-                    // note that unless the email address passed to this method, we don't expect
-                    // to run into any errors (other than typical network connection errors)
-                    
-                    // get all providers that are not the one that the user just tried authenticating with
-                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
-                        completion(.failure(.requiresAccountLinking(providers, context)))
-                    }
-                    else {
-                        let msg = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
-                        completion(.failure(.other(msg, context)))
                     }
                 }
             }
@@ -237,8 +236,27 @@ extension AuthManager {
                     }
                 }
             }
+            else if error.code == AuthErrorCode.accountExistsWithDifferentCredential.rawValue {
+                let email =  error.userInfo[AuthErrorUserInfoEmailKey] as! String
+                Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
+                    // note that unless the email address passed to this method, we don't expect
+                    // to run into any errors (other than typical network connection errors)
+                    
+                    // get all providers that are not the one that the user just tried authenticating with
+                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
+                        completion(.failure(.requiresAccountLinking(providers, context)))
+                    }
+                    else {
+                        let msg = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
+                        completion(.failure(.other(msg, context)))
+                    }
+                }
+            }
             else if error.code == AuthErrorCode.userNotFound.rawValue {
                 completion(.failure(.invalidEmailOrPassword(context)))
+            }
+            else if error.code == AuthErrorCode.providerAlreadyLinked.rawValue {
+                completion(.failure(.providerAlreadyLinked(context)))
             }
             else {
                 let msg = error.localizedDescription
@@ -259,7 +277,7 @@ extension AuthManager {
                 // ensure the user is refreshed
                 authenticatedUser.reload(completion: { (_) in
                     // a reload error is irrelevant, the update was successful regardless of the reload
-                    completion(.success(true))
+                    completion(.success(authenticatedUser))
                 })
                 return
             }
@@ -279,12 +297,32 @@ extension AuthManager {
                 // ensure the user is refreshed
                 authenticatedUser.reload(completion: { (_) in
                     // a reload error is irrelevant, the update was successful regardless of the reload
-                    completion(.success(true))
+                    completion(.success(authenticatedUser))
                 })
                 return
             }
             
             let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .password(password))
+            self.handleProfileChangeError(error, context: context, completion: completion)
+        }
+    }
+    
+    public func unlinkFrom(providerID: IdentityProviderID, completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        authenticatedUser.unlink(fromProvider: providerID.rawValue) { (user, error) in
+            guard let error = error else {
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(authenticatedUser))
+                })
+                return
+            }
+            
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkProvider(providerID))
             self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
@@ -302,13 +340,17 @@ extension AuthManager {
                     completion(.failure(.requiresRecentSignIn(context)))
                 }
             }
+            else if error.code == AuthErrorCode.noSuchProvider.rawValue {
+                completion(.failure(.noSuchProvider(context)))
+            }
             else {
                 let msg = error.localizedDescription
                 completion(.failure(.other(msg, context)))
             }
         }
         else {
-            completion(.success(true))
+            let authenticatedUser = context.authenticatedUser
+            completion(.success(authenticatedUser))
         }
     }
     

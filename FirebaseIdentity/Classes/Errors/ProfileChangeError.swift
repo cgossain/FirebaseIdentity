@@ -13,11 +13,18 @@ public enum ProfileChangeError: Error {
     /// The context in which the error occurred.
     public struct Context {
         public enum ProfileChangeType {
-            /// Indicates that the user attempted to update their email. As an associated value this case contains the email that the user attempted to set.
+            /// Indicates that the user attempted to update their email. As an associated
+            /// value this case contains the email that the user attempted to set.
             case email(String)
             
-            /// Indicates that the user attempted to update their password. As an associated value this case contains the password that the user attempted to set.
+            /// Indicates that the user attempted to update their password. As an
+            /// associated value this case contains the password that the user attempted to set.
             case password(String)
+            
+            /// Indicates that the user attempted to unlink an auth provider. As an
+            /// associated value, this case contains the ID of the identity provider
+            /// the user attempted to unlink from.
+            case unlinkProvider(IdentityProviderID)
         }
         
         /// The identity provider that was used to authenticate.
@@ -37,7 +44,7 @@ public enum ProfileChangeError: Error {
         }
     }
     
-    /// FIRAuthErrorCodeRequiresRecentLogin
+    /// Can be trigged by Firebase error 17014
     ///
     /// An indication that the user tried to perform a security sensitive action that requires them to have
     /// recently signed in. These actions include: deleting an account, setting a primary email address, and changing a password.
@@ -47,6 +54,13 @@ public enum ProfileChangeError: Error {
     ///
     /// As an associated value, this case contains the context for debugging.
     case requiresRecentSignIn(ProfileChangeError.Context)
+    
+    /// Can be trigged by Firebase error 17016
+    ///
+    /// An indication that the user tried to unlink a provider that is not linked.
+    ///
+    /// As an associated value, this case contains the context for debugging.
+    case noSuchProvider(ProfileChangeError.Context)
     
     /// An indication that a general error has occured.
     ///
@@ -61,6 +75,8 @@ extension ProfileChangeError.Context.ProfileChangeType {
             return email
         case .password(let password):
             return password
+        case .unlinkProvider(let providerID):
+            return providerID.rawValue
         }
     }
 }
@@ -70,6 +86,9 @@ extension ProfileChangeError {
         switch self {
         case .requiresRecentSignIn(let context):
             let msg = "This is a security sensitive action and requires a recent sign-in.\n\n\(context)"
+            return msg
+        case .noSuchProvider(let context):
+            let msg = "The provider is not linked.\n\n\(context)"
             return msg
         case .other(let message, let context):
             let msg = "\(message).\n\n\(context)"

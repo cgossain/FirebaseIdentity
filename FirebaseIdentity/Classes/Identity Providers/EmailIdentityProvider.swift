@@ -38,4 +38,14 @@ public final class EmailIdentityProvider: IdentityProvider {
             completion(nil, nil)
         }
     }
+    
+    public func link(completion: @escaping AuthDataResultCallback) {
+        if let currentUser = Auth.auth().currentUser {
+            let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+            currentUser.link(with: credential, completion: completion)
+        }
+        else {
+            completion(nil, nil)
+        }
+    }
 }

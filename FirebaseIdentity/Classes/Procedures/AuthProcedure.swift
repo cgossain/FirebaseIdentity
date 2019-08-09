@@ -44,6 +44,12 @@ final class AuthProcedure<P: IdentityProvider>: Procedure {
                 self.completion(result, error)
                 self.finish()
             }
+            
+        case .linkProvider:
+            provider.link { (result, error) in
+                self.completion(result, error)
+                self.finish()
+            }
         }
     }
 }

@@ -35,7 +35,7 @@ class SignedOutViewController: StaticTableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = NSLocalizedString("Welcome", comment: "navigation bar title")
+        title = "Welcome"
         reloadSections()
     }
     

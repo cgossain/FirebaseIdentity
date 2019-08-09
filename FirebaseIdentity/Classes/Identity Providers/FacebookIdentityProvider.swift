@@ -37,4 +37,14 @@ public final class FaceboookIdentityProvider: IdentityProvider {
             completion(nil, nil)
         }
     }
+    
+    public func link(completion: @escaping AuthDataResultCallback) {
+        if let currentUser = Auth.auth().currentUser {
+            let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
+            currentUser.link(with: credential, completion: completion)
+        }
+        else {
+            completion(nil, nil)
+        }
+    }
 }
