@@ -113,7 +113,7 @@ fileprivate extension SignedInViewController {
 
 fileprivate extension SignedInViewController {
     func reloadSections() {
-        let sections = [self.accountSection, self.linkedProvidersSection, self.signOutSection]
+        let sections = [accountSection, linkedProvidersSection, signOutSection, deleteAccountSection]
         self.dataSource.sections = sections
     }
     
@@ -252,6 +252,21 @@ fileprivate extension SignedInViewController {
             LoginManager().logOut()
         }
         return Section(rows: [signOutRow])
+    }
+    
+    var deleteAccountSection: Section {
+        var deleteAccountRow = Row(text: "Delete Account", cellClass: Value1Cell.self)
+        deleteAccountRow.selection = {
+            AuthManager.shared.deleteAccount(with: { (result) in
+                switch result {
+                case .success(_):
+                    print("User deleted successfully")
+                case .failure(let error):
+                    self.showAlert(for: error)
+                }
+            })
+        }
+        return Section(rows: [deleteAccountRow])
     }
     
 }

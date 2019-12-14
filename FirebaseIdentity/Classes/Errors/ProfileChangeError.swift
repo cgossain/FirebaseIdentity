@@ -15,16 +15,19 @@ public enum ProfileChangeError: Error {
         public enum ProfileChangeType {
             /// Indicates that the user attempted to update their email. As an associated
             /// value this case contains the email that the user attempted to set.
-            case email(String)
+            case updateEmail(String)
             
             /// Indicates that the user attempted to update their password. As an
             /// associated value this case contains the password that the user attempted to set.
-            case password(String)
+            case updatePassword(String)
             
             /// Indicates that the user attempted to unlink an auth provider. As an
             /// associated value, this case contains the ID of the identity provider
             /// the user attempted to unlink from.
-            case unlinkProvider(IdentityProviderID)
+            case unlinkFromProvider(IdentityProviderID)
+            
+            /// Indicates that the user tried to delete their account.
+            case deleteAccount
         }
         
         /// The identity provider that was used to authenticate.
@@ -71,12 +74,14 @@ public enum ProfileChangeError: Error {
 extension ProfileChangeError.Context.ProfileChangeType {
     public var attemptedValue: String {
         switch self {
-        case .email(let email):
+        case .updateEmail(let email):
             return email
-        case .password(let password):
+        case .updatePassword(let password):
             return password
-        case .unlinkProvider(let providerID):
+        case .unlinkFromProvider(let providerID):
             return providerID.rawValue
+        default:
+            return "n/a"
         }
     }
 }

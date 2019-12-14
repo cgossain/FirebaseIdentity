@@ -40,7 +40,7 @@
 		10A5AC7322F4E10C002924E5 /* UIViewController+Alert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIViewController+Alert.swift"; sourceTree = "<group>"; };
 		10D9241E22EF5768008E8157 /* StaticTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaticTableViewController.swift; sourceTree = "<group>"; };
 		10D9242322EF7472008E8157 /* FAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FAccount.swift; sourceTree = "<group>"; };
-		570D653BDA4170F675509DC9 /* FirebaseIdentity.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = FirebaseIdentity.podspec; path = ../FirebaseIdentity.podspec; sourceTree = "<group>"; };
+		570D653BDA4170F675509DC9 /* FirebaseIdentity.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = FirebaseIdentity.podspec; path = ../FirebaseIdentity.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		5FDD06293B5B927DB2A215B8 /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
 		607FACD01AFB9204008FA782 /* FirebaseIdentity_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FirebaseIdentity_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACD41AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };

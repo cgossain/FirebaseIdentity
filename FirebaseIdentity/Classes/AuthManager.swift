@@ -152,14 +152,14 @@ extension AuthManager {
             case .success(_):
                 // using the information in the challenge object, we can retry the profile change that had previously failed
                 switch challenge.context.profileChangeType {
-                case .email(let email):
+                case .updateEmail(let email):
                     self.updateEmail(to: email, completion: challenge.completion)
                     
-                case .password(let password):
+                case .updatePassword(let password):
                     self.updatePassword(to: password, completion: challenge.completion)
                     
-                case .unlinkProvider(_):
-                    break // not retryable
+                default:
+                    break // does not need reauthentication
                 }
                 
             case .failure(let error):
@@ -282,7 +282,7 @@ extension AuthManager {
                 return
             }
 
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .email(email))
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updateEmail(email))
             self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
@@ -302,7 +302,7 @@ extension AuthManager {
                 return
             }
             
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .password(password))
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updatePassword(password))
             self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
@@ -322,7 +322,23 @@ extension AuthManager {
                 return
             }
             
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkProvider(providerID))
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkFromProvider(providerID))
+            self.handleProfileChangeError(error, context: context, completion: completion)
+        }
+    }
+    
+    public func deleteAccount(with completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        authenticatedUser.delete { (error) in
+            guard let error = error else {
+                completion(.success(authenticatedUser))
+                return
+            }
+            
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .deleteAccount)
             self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
