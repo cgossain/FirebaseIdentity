@@ -1,7 +1,7 @@
 //
 // StoryboardInterfaceProvider.swift
 //
-// Copyright (c) 2017 Christian Gossain
+// Copyright (c) 2019 Christian Gossain
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,22 +23,23 @@
 
 import UIKit
 
-class StoryboardInterfaceProvider: AppControllerInterfaceProviding {
-    
+class StoryboardInterfaceProvider {
     let storyboard: UIStoryboard
     let loggedOutInterfaceID: String
     let loggedInInterfaceID: String
     let configuration: AppController.Configuration
     
+    
+    // MARK: - Lifecycle
     init(storyboard: UIStoryboard, loggedOutInterfaceID: String, loggedInInterfaceID: String, configuration: AppController.Configuration) {
         self.storyboard = storyboard
         self.loggedOutInterfaceID = loggedOutInterfaceID
         self.loggedInInterfaceID = loggedInInterfaceID
         self.configuration = configuration
     }
-    
-    // MARK: - AppControllerInterfaceProviding
-    
+}
+
+extension StoryboardInterfaceProvider: AppControllerInterfaceProviding {
     func configuration(for appController: AppController, traitCollection: UITraitCollection) -> AppController.Configuration {
         return configuration
     }
@@ -54,5 +55,4 @@ class StoryboardInterfaceProvider: AppControllerInterfaceProviding {
     func isInitiallyLoggedIn(for appController: AppController) -> Bool {
         return false
     }
-    
 }

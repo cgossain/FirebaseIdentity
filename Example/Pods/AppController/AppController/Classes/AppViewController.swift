@@ -1,7 +1,7 @@
 //
 // AppViewController.swift
 //
-// Copyright (c) 2017 Christian Gossain
+// Copyright (c) 2019 Christian Gossain
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -56,7 +56,8 @@ open class AppViewController: UIViewController {
     open override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         
-        // force the window snapshot to stay on top; this is useful when other subviews are added during the transition (i.e. a presentation, split view master panel in portrait mode, etc.)
+        // force the window snapshot to stay on top; this is useful when other subviews are added during the
+        // transition (i.e. a presentation, split view master panel in portrait mode, etc.)
         if let snapshot = view.window?.viewWithTag(Metrics.snapshotTag) {
             view.window?.bringSubviewToFront(snapshot)
         }
@@ -64,12 +65,14 @@ open class AppViewController: UIViewController {
 }
 
 extension AppViewController {
-    /// Transitions from the currently installed view controller to the specified view controller. If no view controller is installed, then this method simply loads the specified view controller.
+    /// Transitions from the currently installed view controller to the specified view controller. If no view
+    /// controller is installed, then this method simply loads the specified view controller.
     ///
-    /// - Parameter toViewController: The view controller to transition to.
-    /// - Parameter configuration: The configuration model containing details on the transition.
-    /// - Parameter willBeginTransition: A block that is called just before the transition actually begins (i.e. after internally dismissing a presented view controller, but before the transition)
-    /// - Parameter completionHandler: A block to be executed after the transition completes.
+    /// - Parameters:
+    ///     - toViewController: The view controller to transition to.
+    ///     - configuration: The configuration model containing details on the transition.
+    ///     - willBeginTransition: A block that is called just before the transition begins (but after internally dismissing any presented view controller)
+    ///     - completionHandler: A block to be executed after the transition completes.
     open func transition(to toViewController: UIViewController, configuration: AppController.Configuration, willBeginTransition: (() -> Void)? = nil, completionHandler: (() -> Void)?) {
         // prevent adding the view controller if it's already our child
         if toViewController.parent == self {
@@ -99,8 +102,9 @@ extension AppViewController {
 }
 
 fileprivate extension AppViewController {
-    /// Technique #1: Transition is performed by resigning first responder, then snapshotting the entire window. The snapshot is placed on top of all
-    /// other window subviews while the underlying hierarchy is changed. Finally the snapshot is faded out, and removed to reveal the updated view hierarchy.
+    /// Technique #1: Transition is performed by resigning first responder, then snapshotting the entire window. The snapshot
+    /// is placed on top of all other window subviews while the underlying hierarchy is changed. Finally the snapshot is
+    /// faded out, and removed to reveal the updated view hierarchy.
     func transitionBySnapshotting(from fromViewController: UIViewController, to toViewController: UIViewController, in window: UIWindow, duration: TimeInterval, delay: TimeInterval, completionHandler: (() -> Void)?) {
         // resign any active first responder before continuing
         window.resignCurrentFirstResponderIfNeeded {
@@ -112,11 +116,14 @@ fileprivate extension AppViewController {
             if let snapshot = snapshot {
                 window.addSubview(snapshot)
             }
-            
-            // hide all transition views immediately
-            let presentedTransitionViews = window.subviewsWithClassName("UITransitionView")
-            presentedTransitionViews.forEach { $0.isHidden = true }
-            
+
+            if #available(iOS 13.0, *) {}
+            else {
+                // hide all transition views immediately
+                let presentedTransitionViews = window.subviewsWithClassName("UITransitionView")
+                presentedTransitionViews.forEach { $0.isHidden = true }
+            }
+
             // build the transition block
             let performTransition = {
                 // notify the `fromViewController` is about to be removed
@@ -181,9 +188,10 @@ fileprivate extension AppViewController {
         }
     }
     
-    /// Technique #2: Transition keeps the topmost UITransitionView visible, but hides all other ones (i.e. when there are multiple presentations overlayed). The topmost UITransitionView is faded out as the `toView` is faded in.
+    /// Technique #2: Transition keeps the topmost UITransitionView visible, but hides all other ones (i.e. when there are
+    /// multiple presentations overlayed). The topmost UITransitionView is faded out as the `toView` is faded in.
     ///
-    /// - Note: This method is not currently being used. I've kept it for reference.
+    /// - Attention: This method is no longer being used, but I've kept it here for reference. The snapshotting technique is more reliable
     func transitionByDismissing(from fromViewController: UIViewController, to toViewController: UIViewController, in window: UIWindow, duration: TimeInterval, delay: TimeInterval, completionHandler: (() -> Void)?) {
         // resign any active first responder before continuing
         window.resignCurrentFirstResponderIfNeeded {

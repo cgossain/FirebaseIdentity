@@ -79,7 +79,7 @@ static NSString *const FBSDKDeferredAppLinkEvent = @"DEFERRED_APP_LINK";
   }];
 }
 
-+ (NSString *)appInvitePromotionCodeFromURL:(NSURL *)url;
++ (NSString *)appInvitePromotionCodeFromURL:(NSURL *)url
 {
   FBSDKURL *parsedUrl = [FBSDKURL URLWithURL:url];
   NSDictionary *extras = parsedUrl.appLinkExtras;
@@ -99,4 +99,21 @@ static NSString *const FBSDKDeferredAppLinkEvent = @"DEFERRED_APP_LINK";
   return nil;
 
 }
+
++ (BOOL)isMatchURLScheme:(NSString *)scheme
+{
+  if (!scheme) {
+    return NO;
+  }
+  for(NSDictionary *urlType in [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleURLTypes"])
+  {
+    for(NSString *urlScheme in urlType[@"CFBundleURLSchemes"]) {
+      if([urlScheme caseInsensitiveCompare:scheme] == NSOrderedSame) {
+        return YES;
+      }
+    }
+  }
+  return NO;
+}
+
 @end

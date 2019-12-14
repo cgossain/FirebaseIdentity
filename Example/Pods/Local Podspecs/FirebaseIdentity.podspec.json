@@ -15,10 +15,9 @@
     "git": "https://github.com/cgossain/FirebaseIdentity.git",
     "tag": "0.1.0"
   },
-  "swift_versions": "4.2",
   "static_framework": true,
   "platforms": {
-    "ios": "10.3"
+    "ios": "11.4"
   },
   "source_files": "FirebaseIdentity/Classes/**/*",
   "dependencies": {
@@ -31,6 +30,5 @@
     "ProcedureKit": [
 
     ]
-  },
-  "swift_version": "4.2"
+  }
 }

@@ -93,8 +93,9 @@ static NSString *const advertiserIDCollectionEnabledFalseWarning =
     g_tokenCache = [[FBSDKAccessTokenCache alloc] init];
     g_accessTokenExpirer = [[FBSDKAccessTokenExpirer alloc] init];
 
-    [FBSDKSettings logWarnings];
+    [FBSDKSettings _logWarnings];
     [FBSDKSettings _logIfSDKSettingsChanged];
+    [FBSDKSettings _logIfAutoAppLinkEnabled];
   }
 }
 
@@ -107,6 +108,7 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSString, FacebookDisplayName, di
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSString, FacebookDomainPart, facebookDomainPart, setFacebookDomainPart, nil, NO);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookJpegCompressionQuality, _JPEGCompressionQualityNumber, _setJPEGCompressionQualityNumber, @0.9, NO);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookAutoInitEnabled, _autoInitEnabled, _setAutoInitEnabled, @1, YES);
+FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookInstrumentEnabled, _instrumentEnabled, _setInstrumentEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookAutoLogAppEventsEnabled, _autoLogAppEventsEnabled, _setAutoLogAppEventsEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookAdvertiserIDCollectionEnabled, _advertiserIDCollectionEnabled, _setAdvertiserIDCollectionEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookCodelessDebugLogEnabled, _codelessDebugLogEnabled,
@@ -143,6 +145,16 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookCodelessDebugLo
   if (autoInitEnabled) {
     [FBSDKApplicationDelegate initializeSDK:nil];
   }
+}
+
++ (BOOL)isInstrumentEnabled
+{
+  return [self _instrumentEnabled].boolValue;
+}
+
++ (void)setInstrumentEnabled:(BOOL)instrumentEnabled
+{
+  [self _setInstrumentEnabled:@(instrumentEnabled)];
 }
 
 + (BOOL)isCodelessDebugLogEnabled
@@ -300,7 +312,7 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookCodelessDebugLo
   return defaultValue;
 }
 
-+ (void)logWarnings
++ (void)_logWarnings
 {
   NSBundle *mainBundle = [NSBundle mainBundle];
   // Log warnings for App Event Flags
@@ -346,6 +358,22 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookCodelessDebugLo
                                        @"current": @(bitmask)}
                   isImplicitlyLogged:YES];
   }
+}
+
++ (void)_logIfAutoAppLinkEnabled
+{
+#if !TARGET_OS_TV
+  NSNumber *enabled = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"FBSDKAutoAppLinkEnabled"];
+  if (enabled.boolValue) {
+    NSMutableDictionary<NSString *, NSString *> *params = [[NSMutableDictionary alloc] init];
+    if (![FBSDKAppLinkUtility isMatchURLScheme:[NSString stringWithFormat:@"fb%@", [FBSDKSettings appID]]]) {
+      NSString *warning = @"You haven't set the Auto App Link URL scheme: fb<YOUR APP ID>";
+      params[@"SchemeWarning"] = warning;
+      NSLog(@"%@", warning);
+    }
+    [FBSDKAppEvents logInternalEvent:@"fb_auto_applink" parameters:params isImplicitlyLogged:YES];
+  }
+#endif
 }
 
 #pragma mark - Internal - Graph API Debug

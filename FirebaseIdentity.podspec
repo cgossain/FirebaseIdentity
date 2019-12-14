@@ -9,9 +9,8 @@ TODO: Add long description of the pod here.
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'cgossain' => 'cgossain@gmail.com' }
   s.source           = { :git => 'https://github.com/cgossain/FirebaseIdentity.git', :tag => s.version.to_s }
-  s.swift_version = '4.2'
   s.static_framework = true
-  s.ios.deployment_target = '10.3'
+  s.ios.deployment_target = '11.4'
   s.source_files = 'FirebaseIdentity/Classes/**/*'
   s.dependency 'Firebase/Core'
   s.dependency 'Firebase/Auth'
