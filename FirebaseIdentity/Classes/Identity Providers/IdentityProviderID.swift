@@ -8,6 +8,14 @@
 import Foundation
 import FirebaseAuth
 
+public extension IdentityProviderID {
+    /// The Firebase provider ID for email authentication.
+    static let email = IdentityProviderID(rawValue: EmailAuthProviderID)!
+    
+    /// The Firebase provider ID for Facebook authentication.
+    static let facebook = IdentityProviderID(rawValue: FacebookAuthProviderID)!
+}
+
 public struct IdentityProviderID: RawRepresentable {
     /// The raw Firebase auth provider ID.
     public let rawValue: String
@@ -24,14 +32,6 @@ public struct IdentityProviderID: RawRepresentable {
             return nil
         }
     }
-}
-
-public extension IdentityProviderID {
-    /// The Firebase provider ID for email authentication.
-    static let email = IdentityProviderID(rawValue: EmailAuthProviderID)!
-    
-    /// The Firebase provider ID for Facebook authentication.
-    static let facebook = IdentityProviderID(rawValue: FacebookAuthProviderID)!
 }
 
 extension IdentityProviderID: Hashable, Equatable {
