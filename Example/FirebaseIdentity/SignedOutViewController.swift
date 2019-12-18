@@ -13,10 +13,13 @@ import FirebaseIdentity
 import FBSDKLoginKit
 
 extension AuthManager {
-    static var debugEmailProviderUsers: [FUser] = [FUser(email: "test@test.com", password: "password111"),
-                                                   FUser(email: "cgossain@gmail.com", password: "password111"),
-                                                   FUser(email: "test@test.com", password: "password222"),
-                                                   FUser(email: "cgossain@gmail.com", password: "password222")]
+    static var debugEmailProviderUsers = [FUser(email: "test@test.com", password: "password111"),
+                                          FUser(email: "cgossain@gmail.com", password: "password111"),
+                                          FUser(email: "test@test.com", password: "password222"),
+                                          FUser(email: "cgossain@gmail.com", password: "password222")]
+    
+    static var debugPasswordUpdate = [PasswordUpdate(current: "password111", new: "password222"),
+                                      PasswordUpdate(current: "password222", new: "password111")]
 }
 
 class SignedOutViewController: StaticTableViewController {
@@ -102,7 +105,7 @@ fileprivate extension SignedOutViewController {
                     }
                     return
                 }
-
+                
                 let token = AccessToken.current!.tokenString
                 let provider = FaceboookIdentityProvider(accessToken: token)
                 AuthManager.shared.signUp(with: provider) { (result) in

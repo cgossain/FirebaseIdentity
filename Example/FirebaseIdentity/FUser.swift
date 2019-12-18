@@ -12,3 +12,8 @@ struct FUser {
     let email: String
     let password: String
 }
+
+struct PasswordUpdate {
+    let current: String
+    let new: String
+}

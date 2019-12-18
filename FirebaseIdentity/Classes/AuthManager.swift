@@ -40,16 +40,26 @@ public typealias ProfileChangeHandler = (Result<User, ProfileChangeError>) -> Vo
 
 /// An object that provides context about the profile change that triggered the reauthentication challenge.
 public struct ProfileChangeReauthenticationChallenge {
+    /// The error context that caused the reauthentication challenge to occur.
     public let context: ProfileChangeError.Context
+    
+    /// Interal use completion handler.
     fileprivate let completion: ProfileChangeHandler
 }
 
-/// The auth manager delegate.
-public protocol AuthManagerDelegate: class {
-    /// Called when a reauthentication of the current user is required to perform an action. Your
-    /// implementation should get an updated AuthCredential (e.g. via UI presented to the user), then
-    /// call the auth manager's `reauthenticate` method.
-    func authManager(_ manager: AuthManager, didReceive challenge: ProfileChangeReauthenticationChallenge)
+public protocol AuthManagerReauthenticating: class {
+    /// Called when an action triggers the `requiresRecentLogin` from Firebase.
+    ///
+    /// - parameters:
+    ///     - manager: The auth manager instance that is requesting reauthentication.
+    ///     - providers: An array of available/linked providers that should be used for reauthentication. These can either be presented as options to a user, or the first item in the list can automatically be used for reauthentication. The providers are pre-sorted according to the priority order specified in the `providerReauthenticationPriority` property.
+    ///     - challenge: An object that must be passed to the auth manager's `reauthenticate` method. This is required to continue/retry the action that triggered the `requiresRecentLogin` error.
+    func authManager(_ manager: AuthManager, needsReauthenticationUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
+}
+
+extension AuthManager {
+    /// Posted on the main queue when the authentication state changes.
+    public static let authenticationStateChangedNotification = Notification.Name("com.firebaseidentity.authmanager.authenticationstatechangednotification")
 }
 
 /// An object that manages all Firebase authentication and user related events.
@@ -60,14 +70,11 @@ public class AuthManager {
         case authenticated
     }
     
-    /// Posted on the main queue when the authentication state changes.
-    public static let authenticationStateChangedNotification = Notification.Name("com.firebaseidentity.authmanager.authenticationstatechangednotification")
-    
     /// The shared instance.
     public static let shared = AuthManager()
     
-    /// The object that receive delegate notifications.
-    public weak var delegate: AuthManagerDelegate?
+    /// The object that will be used to handle reauthentication.
+    public weak var reauthenticator: AuthManagerReauthenticating?
     
     /// The authentication state of the receiver.
     public private(set) var authenticationState = State.notDetermined
@@ -76,21 +83,40 @@ public class AuthManager {
     public private(set) var authenticatedUser: User?
     
     /// The list of identity providers associated with the currently authenticated user.
+    ///
+    /// - note: The providers are returned in sorted by the priority order specified in `providerReauthenticationPriority`.
     public var linkedProviders: [IdentityProviderUserInfo] {
-        return authenticatedUser?.providerData.compactMap({
-            guard let providerID = IdentityProviderID(rawValue: $0.providerID) else {
-                return nil
-            }
+        let providers: [IdentityProviderUserInfo] = authenticatedUser?.providerData.compactMap({
+            guard let providerID = IdentityProviderID(rawValue: $0.providerID) else { return nil }
             return IdentityProviderUserInfo(providerID: providerID, email: $0.email)
         }) ?? []
+        
+        // sort according to the priority order
+        // https://stackoverflow.com/a/51683055/485352
+        return providers.sorted {
+            guard let first = providerReauthenticationPriority.firstIndex(of: $0.providerID) else {
+                return false
+            }
+
+            guard let second = providerReauthenticationPriority.firstIndex(of: $1.providerID) else {
+                return true
+            }
+
+            return first < second
+        }
     }
+    
+    /// The order of priority that identity providers should be used for reauthentication when available.
+    ///
+    /// Defaults to `[.email, .facebook]`.
+    public var providerReauthenticationPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
     
     // MARK: - Private Properties
     /// An internal procedure queue for authentication procedures (i.e. sign-up, sign-in, reauthentication). This primary
     /// purpose for using procedure for authentication is that it provides a way to maintain a strong reference to the
     /// identity provider while the authentication action is in progress.
-    fileprivate var authenticationProcedureQueue: ProcedureQueue = {
+    private var authenticationProcedureQueue: ProcedureQueue = {
         let queue = ProcedureQueue()
         queue.name = "com.firebaseIdentity.authManager.authenticationProcedureQueue"
         queue.maxConcurrentOperationCount = 1
@@ -99,23 +125,11 @@ public class AuthManager {
     
     
     // MARK: - Lifecycle
+    /// Configures the shared AuthManager instance.
+    ///
+    /// This method should be called shortly after the app is launched after the Firebase services have been configured (i.e. `FirebaseApp.configure()`).
     public static func configure() {
         AuthManager.shared.start()
-    }
-    
-    private func start() {
-        Auth.auth().addStateDidChangeListener({ (auth, user) in
-            if let user = user {
-                self.authenticatedUser = user
-                self.authenticationState = .authenticated
-            }
-            else {
-                self.authenticatedUser = nil
-                self.authenticationState = .notAuthenticated
-            }
-            
-            NotificationCenter.default.post(name: AuthManager.authenticationStateChangedNotification, object: self, userInfo: nil)
-        })
     }
 }
 
@@ -128,7 +142,7 @@ extension AuthManager {
             }
             
             let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .signUp)
-            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+            self.handleAuthProcedureFirebaseError(error, context: context, provider: provider, completion: completion)
         })
     }
     
@@ -140,12 +154,10 @@ extension AuthManager {
             }
             
             let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .signIn)
-            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+            self.handleAuthProcedureFirebaseError(error, context: context, provider: provider, completion: completion)
         })
     }
     
-    /// If reauthentication is successful, then the profile change that previously failed is automatically
-    /// retried. If reauthentication fails, the error handler will fire.
     public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, errorHandler: @escaping (AuthenticationError) -> Void) {
         self.reauthenticate(with: provider) { (result) in
             switch result {
@@ -176,7 +188,112 @@ extension AuthManager {
             }
             
             let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .linkProvider)
-            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+            self.handleAuthProcedureFirebaseError(error, context: context, provider: provider, completion: completion)
+        })
+    }
+}
+
+extension AuthManager {
+    /// Updates the email address for the user.
+    ///
+    /// - parameters:
+    ///     - newEmail: The new email address for the user.
+    ///     - passwordForReauthentication: If provided, this password will be silently used to reauthenticate using the `email` provider (if available) and if the `requiresRecentLogin` Firebase error is triggered. Otherwise, reauthentication occurs via the `reauthenticator` object.
+    public func updateEmail(to newEmail: String, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+
+        authenticatedUser.updateEmail(to: newEmail) { (error) in
+            guard let error = error else {
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(authenticatedUser))
+                })
+                return
+            }
+
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updateEmail(newEmail))
+            self.handleProfileChangeFirebaseError(error, context: context, passwordForReauthentication: passwordForReauthentication, completion: completion)
+        }
+    }
+    
+    /// Updates (or sets) the password for the user.
+    ///
+    /// - parameters:
+    ///     - newPassword: The new password for the user.
+    ///     - passwordForReauthentication: If provided, this password will be silently used to reauthenticate using the `email` provider (if available) and if the `requiresRecentLogin` Firebase error is triggered. Otherwise, reauthentication occurs via the `reauthenticator` object.
+    public func updatePassword(to newPassword: String, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        authenticatedUser.updatePassword(to: newPassword) { (error) in
+            guard let error = error else {
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(authenticatedUser))
+                })
+                return
+            }
+            
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updatePassword(newPassword))
+            self.handleProfileChangeFirebaseError(error, context: context, passwordForReauthentication: passwordForReauthentication, completion: completion)
+        }
+    }
+    
+    public func unlinkFrom(providerID: IdentityProviderID, completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        authenticatedUser.unlink(fromProvider: providerID.rawValue) { (user, error) in
+            guard let error = error else {
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(authenticatedUser))
+                })
+                return
+            }
+            
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkFromProvider(providerID))
+            self.handleProfileChangeFirebaseError(error, context: context, completion: completion)
+        }
+    }
+    
+    public func deleteAccount(with completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        authenticatedUser.delete { (error) in
+            guard let error = error else {
+                completion(.success(authenticatedUser))
+                return
+            }
+            
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .deleteAccount)
+            self.handleProfileChangeFirebaseError(error, context: context, completion: completion)
+        }
+    }
+}
+
+extension AuthManager {
+    private func start() {
+        Auth.auth().addStateDidChangeListener({ (auth, user) in
+            if let user = user {
+                self.authenticatedUser = user
+                self.authenticationState = .authenticated
+            }
+            else {
+                self.authenticatedUser = nil
+                self.authenticationState = .notAuthenticated
+            }
+            
+            NotificationCenter.default.post(name: AuthManager.authenticationStateChangedNotification, object: self, userInfo: nil)
         })
     }
     
@@ -188,11 +305,11 @@ extension AuthManager {
             }
             
             let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .reauthenticate)
-            self.handleAuthProcedureError(error, context: context, provider: provider, completion: completion)
+            self.handleAuthProcedureFirebaseError(error, context: context, provider: provider, completion: completion)
         })
     }
     
-    private func handleAuthProcedureError<P: IdentityProvider>(_ error: Error, context: AuthenticationError.Context, provider: P, completion: @escaping AuthResultHandler) {
+    private func handleAuthProcedureFirebaseError<P: IdentityProvider>(_ error: Error, context: AuthenticationError.Context, provider: P, completion: @escaping AuthResultHandler) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.emailAlreadyInUse.rawValue, provider.providerID == .email {
                 // this error is only ever is specifically triggered when using the "createUserWithEmail" method
@@ -264,93 +381,24 @@ extension AuthManager {
             }
         }
     }
-}
-
-extension AuthManager {
-    public func updateEmail(to email: String, completion: @escaping ProfileChangeHandler) {
-        guard let authenticatedUser = authenticatedUser else {
-            return
-        }
-
-        authenticatedUser.updateEmail(to: email) { (error) in
-            guard let error = error else {
-                // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
-                    completion(.success(authenticatedUser))
-                })
-                return
-            }
-
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updateEmail(email))
-            self.handleProfileChangeError(error, context: context, completion: completion)
-        }
-    }
     
-    public func updatePassword(to password: String, completion: @escaping ProfileChangeHandler) {
-        guard let authenticatedUser = authenticatedUser else {
-            return
-        }
-        
-        authenticatedUser.updatePassword(to: password) { (error) in
-            guard let error = error else {
-                // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
-                    completion(.success(authenticatedUser))
-                })
-                return
-            }
-            
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updatePassword(password))
-            self.handleProfileChangeError(error, context: context, completion: completion)
-        }
-    }
-    
-    public func unlinkFrom(providerID: IdentityProviderID, completion: @escaping ProfileChangeHandler) {
-        guard let authenticatedUser = authenticatedUser else {
-            return
-        }
-        
-        authenticatedUser.unlink(fromProvider: providerID.rawValue) { (user, error) in
-            guard let error = error else {
-                // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
-                    completion(.success(authenticatedUser))
-                })
-                return
-            }
-            
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkFromProvider(providerID))
-            self.handleProfileChangeError(error, context: context, completion: completion)
-        }
-    }
-    
-    public func deleteAccount(with completion: @escaping ProfileChangeHandler) {
-        guard let authenticatedUser = authenticatedUser else {
-            return
-        }
-        
-        authenticatedUser.delete { (error) in
-            guard let error = error else {
-                completion(.success(authenticatedUser))
-                return
-            }
-            
-            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .deleteAccount)
-            self.handleProfileChangeError(error, context: context, completion: completion)
-        }
-    }
-    
-    private func handleProfileChangeError(_ error: Error, context: ProfileChangeError.Context, completion: @escaping ProfileChangeHandler) {
+    private func handleProfileChangeFirebaseError(_ error: Error, context: ProfileChangeError.Context, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
-                if let delegate = delegate {
+                if let passwordForReauthentication = passwordForReauthentication, let emailProviderUserInfo = self.linkedProviders.filter({ $0.providerID == .email }).first, let email = emailProviderUserInfo.email {
+                    let challenge = ProfileChangeReauthenticationChallenge(context: context, completion: completion)
+                    
+                    // attempt reauthenticating silently with the provided password
+                    let provider = EmailIdentityProvider(email: email, password: passwordForReauthentication)
+                    self.reauthenticate(with: provider, for: challenge) { (reauthError) in
+                        completion(.failure(.other(reauthError.localizedDescription, context)))
+                    }
+                }
+                else if let reauthenticator = reauthenticator {
                     // 1. notify the delegate that we need to reauthenticate
                     // 2. after a successful reauthentication, we need to continue the profile change and eventually call the completion handler
                     let challenge = ProfileChangeReauthenticationChallenge(context: context, completion: completion)
-                    delegate.authManager(self, didReceive: challenge)
+                    reauthenticator.authManager(self, needsReauthenticationUsing: self.linkedProviders, challenge: challenge)
                 }
                 else {
                     completion(.failure(.requiresRecentSignIn(context)))
@@ -369,5 +417,4 @@ extension AuthManager {
             completion(.success(authenticatedUser))
         }
     }
-    
 }

@@ -37,24 +37,21 @@ class SignedInViewController: StaticTableViewController {
         
         print(authenticatedUser.debugDescription)
         
-        AuthManager.shared.delegate = self
+        AuthManager.shared.reauthenticator = self
         
         reloadSections()
     }
-    
 }
 
-extension SignedInViewController: AuthManagerDelegate {
-    func authManager(_ manager: AuthManager, didReceive challenge: ProfileChangeReauthenticationChallenge) {
-        // automatically ask for reauthentication via an email provider if available, otherwise fallback to another provider
-        let prioritySequence = manager.linkedProviders.sorted { (lhs, rhs) -> Bool in return lhs.providerID == .email }
-        
-        // ask for reauthentication from the highest priority auth provider (email should be tried first if available)
-        guard let provider = prioritySequence.first else {
+extension SignedInViewController: AuthManagerReauthenticating {
+    func authManager(_ manager: AuthManager, needsReauthenticationUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge) {
+        // ask for reauthentication from the highest priority auth provider
+        guard let provider = providers.first else {
             return
         }
         
-        if provider.providerID == .email {
+        switch provider.providerID {
+        case .email:
             // an email provider will always have an email associated with it, therefore it should be safe to force unwrap this value here;
             // what if there is some kind of error that causes the email to be non-existant in this scenario? Force the user to log-out, then back in?
             // it seems like it would be impossible for the email to not exist on an email auth provider
@@ -73,8 +70,7 @@ extension SignedInViewController: AuthManagerDelegate {
             
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
             self.present(alert, animated: true, completion: nil)
-        }
-        else if provider.providerID == .facebook {
+        case .facebook:
             fetchFacebookAccessTokenForReauthentication { (token) in
                 guard let token = token else {
                     return
@@ -84,6 +80,8 @@ extension SignedInViewController: AuthManagerDelegate {
                     self.showAuthenticationErrorAlert(for: error)
                 })
             }
+        default:
+            print("undefined provider")
         }
     }
 }
@@ -119,7 +117,6 @@ fileprivate extension SignedInViewController {
     
     var accountSection: Section {
         let isEmailSet = AuthManager.shared.authenticatedUser?.email != nil
-        
         var emailRow = Row(text: isEmailSet ? "Update Email" : "Set Email", cellClass: Value1Cell.self)
         emailRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "none"
         emailRow.accessory = .disclosureIndicator
@@ -147,16 +144,65 @@ fileprivate extension SignedInViewController {
             self.present(alert, animated: true, completion: nil)
         }
         
-        let isEmailProviderLinked = AuthManager.shared.linkedProviders.filter({ $0.providerID == .email }).first != nil
+        var emailSilentReauthRow = Row(text: isEmailSet ? "Update Email (Silent)" : "Set Email (Silent)", cellClass: Value1Cell.self)
+        emailSilentReauthRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "none"
+        emailSilentReauthRow.accessory = .disclosureIndicator
+        emailSilentReauthRow.selection = { [unowned self] in
+            let alert = UIAlertController(title: "Update Email", message: "Pick an email to use", preferredStyle: .actionSheet)
+            for user in AuthManager.debugEmailProviderUsers {
+                alert.addAction(UIAlertAction(title: user.email+"/"+user.password, style: .default, handler: { (action) in
+                    AuthManager.shared.updateEmail(to: user.email, passwordForReauthentication: user.password, completion: { (result) in
+                        switch result {
+                        case .success(let value):
+                            DispatchQueue.main.async {
+                                print("Email Updated Successfully: \(value)")
+                                self.reloadSections()
+                            }
+                            
+                        case .failure(let error):
+                            self.showProfileChangeErrorAlert(for: error)
+                        }
+                    })
+                }))
+            }
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+        }
         
+        let isEmailProviderLinked = AuthManager.shared.linkedProviders.filter({ $0.providerID == .email }).first != nil
         var passwordRow = Row(text: isEmailProviderLinked ? "Update Password" : "Set Password", cellClass: Value1Cell.self)
         passwordRow.accessory = .disclosureIndicator
         passwordRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Update Password", message: "Pick a password to use", preferredStyle: .actionSheet)
-            // eliminate duplicate emails by converting the mapped array to a Set
-            for password in Set(AuthManager.debugEmailProviderUsers.map({ $0.password })) {
-                alert.addAction(UIAlertAction(title: password, style: .default, handler: { (action) in
-                    AuthManager.shared.updatePassword(to: password, completion: { (result) in
+            for passwordUpdate in AuthManager.debugPasswordUpdate {
+                alert.addAction(UIAlertAction(title: passwordUpdate.new, style: .default, handler: { (action) in
+                    AuthManager.shared.updatePassword(to: passwordUpdate.new, completion: { (result) in
+                        switch result {
+                        case .success(let value):
+                            DispatchQueue.main.async {
+                                print("Password Updated Successfully: \(value)")
+                                self.reloadSections()
+                            }
+                            
+                        case .failure(let error):
+                            self.showProfileChangeErrorAlert(for: error)
+                        }
+                    })
+                }))
+            }
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+        }
+        
+        var passwordSilentReauthRow = Row(text: isEmailProviderLinked ? "Update Password (Silent)" : "Set Password (Silent)", cellClass: Value1Cell.self)
+        passwordSilentReauthRow.accessory = .disclosureIndicator
+        passwordSilentReauthRow.selection = { [unowned self] in
+            let alert = UIAlertController(title: "Update Password", message: "Pick a password to use", preferredStyle: .actionSheet)
+            for passwordUpdate in AuthManager.debugPasswordUpdate {
+                alert.addAction(UIAlertAction(title: passwordUpdate.current+"/"+passwordUpdate.new, style: .default, handler: { (action) in
+                    AuthManager.shared.updatePassword(to: passwordUpdate.new, passwordForReauthentication: passwordUpdate.current, completion: { (result) in
                         switch result {
                         case .success(let value):
                             DispatchQueue.main.async {
@@ -177,7 +223,6 @@ fileprivate extension SignedInViewController {
         
         let isFacebookProviderLinked = AuthManager.shared.linkedProviders.map({ $0.providerID }).contains(.facebook)
         let facebookEmail = AuthManager.shared.linkedProviders.filter({ $0.providerID == .facebook }).compactMap({ $0.email }).first
-        
         var linkFacebookRow = Row(text: "Facebook", cellClass: SubtitleCell.self)
         linkFacebookRow.detailText = facebookEmail
         linkFacebookRow.accessory = .switchToggle(value: isFacebookProviderLinked, { [unowned self] (isOn) in
@@ -232,7 +277,7 @@ fileprivate extension SignedInViewController {
             }
         })
         
-        return Section(header: .title("Account"), rows: [emailRow, passwordRow, linkFacebookRow])
+        return Section(header: .title("Account"), rows: [emailRow, emailSilentReauthRow, passwordRow, passwordSilentReauthRow, linkFacebookRow])
     }
     
     var linkedProvidersSection: Section {
