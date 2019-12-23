@@ -47,6 +47,11 @@ public enum ProfileChangeError: Error {
         }
     }
     
+    /// Indicates that the profile change was cancelled by the user.
+    ///
+    /// As an associated value, this case contains the context for debugging.
+    case cancelledByUser(ProfileChangeError.Context)
+    
     /// Can be trigged by Firebase error 17014
     ///
     /// An indication that the user tried to perform a security sensitive action that requires them to have
@@ -89,6 +94,9 @@ extension ProfileChangeError.Context.ProfileChangeType {
 extension ProfileChangeError {
     public var localizedDescription: String {
         switch self {
+        case .cancelledByUser(let context):
+            let msg = "The profile change was cancelled by the user.\n\n\(context)"
+            return msg
         case .requiresRecentSignIn(let context):
             let msg = "This is a security sensitive action and requires a recent sign-in.\n\n\(context)"
             return msg

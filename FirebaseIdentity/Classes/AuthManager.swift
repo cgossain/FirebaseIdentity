@@ -180,6 +180,10 @@ extension AuthManager {
         }
     }
     
+    public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
+        challenge.completion(.failure(.cancelledByUser(challenge.context)))
+    }
+    
     public func linkWith<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
         authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .linkProvider) { (result, error) in
             guard let error = error else {
