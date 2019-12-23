@@ -118,7 +118,7 @@ fileprivate extension SignedInViewController {
     var accountSection: Section {
         let isEmailSet = AuthManager.shared.authenticatedUser?.email != nil
         var emailRow = Row(text: isEmailSet ? "Update Email" : "Set Email", cellClass: Value1Cell.self)
-        emailRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "none"
+        emailRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "n/a"
         emailRow.accessory = .disclosureIndicator
         emailRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Update Email", message: "Pick an email to use", preferredStyle: .actionSheet)
@@ -145,7 +145,7 @@ fileprivate extension SignedInViewController {
         }
         
         var emailSilentReauthRow = Row(text: isEmailSet ? "Update Email (Silent)" : "Set Email (Silent)", cellClass: Value1Cell.self)
-        emailSilentReauthRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "none"
+        emailSilentReauthRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "n/a"
         emailSilentReauthRow.accessory = .disclosureIndicator
         emailSilentReauthRow.selection = { [unowned self] in
             let alert = UIAlertController(title: "Update Email", message: "Pick an email to use", preferredStyle: .actionSheet)
@@ -277,14 +277,40 @@ fileprivate extension SignedInViewController {
             }
         })
         
-        return Section(header: .title("Account"), rows: [emailRow, emailSilentReauthRow, passwordRow, passwordSilentReauthRow, linkFacebookRow])
+        var displayNameRow = Row(text: "Update Display Name", cellClass: Value1Cell.self)
+        displayNameRow.detailText = AuthManager.shared.authenticatedUser?.displayName ?? "n/a"
+        displayNameRow.accessory = .disclosureIndicator
+        displayNameRow.selection = { [unowned self] in
+            let alert = UIAlertController(title: "Update Display Name", message: "Pick a display name to use", preferredStyle: .actionSheet)
+            for name in AuthManager.debugDisplayNameUpdate {
+                alert.addAction(UIAlertAction(title: name, style: .default, handler: { (action) in
+                    AuthManager.shared.updateDispalyName(to: name) { (result) in
+                        switch result {
+                        case .success(let value):
+                            DispatchQueue.main.async {
+                                print("Display Name Updated Successfully: \(value)")
+                                self.reloadSections()
+                            }
+                        case .failure(let error):
+                            self.showProfileChangeErrorAlert(for: error)
+                        }
+                    }
+                }))
+            }
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+        }
+        
+        return Section(header: .title("Account"),
+                       rows: [emailRow, emailSilentReauthRow, passwordRow, passwordSilentReauthRow, linkFacebookRow, displayNameRow])
     }
     
     var linkedProvidersSection: Section {
         var rows: [Row] = []
         AuthManager.shared.authenticatedUser?.providerData.forEach({ (providerInfo) in
             var row = Row(text: "Provider ID - \(providerInfo.providerID)", cellClass: SubtitleCell.self)
-            row.detailText = "UID: \(providerInfo.uid), Email: \(providerInfo.email ?? "none")"
+            row.detailText = "UID: \(providerInfo.uid), Email: \(providerInfo.email ?? "n/a"), Display Name: \(providerInfo.displayName ?? "n/a")"
             rows.append(row)
         })
         return Section(header: .title("Linked Providers"), rows: rows)

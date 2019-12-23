@@ -13,6 +13,10 @@ public enum ProfileChangeError: Error {
     /// The context in which the error occurred.
     public struct Context {
         public enum ProfileChangeType {
+            /// Indicates that the user attempted to update their display name. As an associated
+            /// value this case contains the email that the user attempted to set.
+            case updateDisplayName(String)
+            
             /// Indicates that the user attempted to update their email. As an associated
             /// value this case contains the email that the user attempted to set.
             case updateEmail(String)

@@ -20,6 +20,8 @@ extension AuthManager {
     
     static var debugPasswordUpdate = [PasswordUpdate(current: "password111", new: "password222"),
                                       PasswordUpdate(current: "password222", new: "password111")]
+    
+    static var debugDisplayNameUpdate = ["Name 1", "Name 2", "Name 3"]
 }
 
 class SignedOutViewController: StaticTableViewController {

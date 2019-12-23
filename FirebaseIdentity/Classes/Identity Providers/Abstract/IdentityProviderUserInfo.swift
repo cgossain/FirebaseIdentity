@@ -9,5 +9,8 @@ import Foundation
 
 public struct IdentityProviderUserInfo {
     public let providerID: IdentityProviderID
+    
     public let email: String?
+    
+    public let displayName: String?
 }

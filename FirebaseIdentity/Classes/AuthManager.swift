@@ -87,8 +87,10 @@ public class AuthManager {
     /// - note: The providers are returned in sorted by the priority order specified in `providerReauthenticationPriority`.
     public var linkedProviders: [IdentityProviderUserInfo] {
         let providers: [IdentityProviderUserInfo] = authenticatedUser?.providerData.compactMap({
-            guard let providerID = IdentityProviderID(rawValue: $0.providerID) else { return nil }
-            return IdentityProviderUserInfo(providerID: providerID, email: $0.email)
+            guard let providerID = IdentityProviderID(rawValue: $0.providerID) else {
+                return nil
+            }
+            return IdentityProviderUserInfo(providerID: providerID, email: $0.email, displayName: $0.displayName)
         }) ?? []
         
         // sort according to the priority order
@@ -198,6 +200,28 @@ extension AuthManager {
 }
 
 extension AuthManager {
+    public func updateDispalyName(to newDisplayName: String, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        let profileChangeRequest = authenticatedUser.createProfileChangeRequest()
+        profileChangeRequest.displayName = newDisplayName
+        profileChangeRequest.commitChanges { (error) in
+            guard let error = error else {
+                // ensure the user is refreshed
+                authenticatedUser.reload(completion: { (_) in
+                    // a reload error is irrelevant, the update was successful regardless of the reload
+                    completion(.success(authenticatedUser))
+                })
+                return
+            }
+
+            let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .updateDisplayName(newDisplayName))
+            self.handleProfileChangeFirebaseError(error, context: context, passwordForReauthentication: passwordForReauthentication, completion: completion)
+        }
+    }
+    
     /// Updates the email address for the user.
     ///
     /// - parameters:
