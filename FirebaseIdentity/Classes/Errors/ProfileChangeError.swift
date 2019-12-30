@@ -13,6 +13,9 @@ public enum ProfileChangeError: Error {
     /// The context in which the error occurred.
     public struct Context {
         public enum ProfileChangeType {
+            /// Indicates that reauthentication was manually requested via the `requestReauthentication()` method.
+            case requestReauthentication
+            
             /// Indicates that the user attempted to update their display name. As an associated
             /// value this case contains the email that the user attempted to set.
             case updateDisplayName(String)
@@ -50,6 +53,13 @@ public enum ProfileChangeError: Error {
             self.profileChangeType = profileChangeType
         }
     }
+    
+    /// Indicates that a reauthentication request could not be completed due to reauthentication methods not being available.
+    ///
+    /// Specifically this would be triggered when the `requestReauthentication()` method is used. This can happen
+    /// if a `passwordForReauthentication` is provided but there is no linked email identity provider associated with
+    /// the currently authenticated user. This can also be triggered if a `reauthenticator` object has not been set.
+    case missingReauthenticationMethod(ProfileChangeError.Context)
     
     /// Indicates that the profile change was cancelled by the user.
     ///
@@ -98,17 +108,20 @@ extension ProfileChangeError.Context.ProfileChangeType {
 extension ProfileChangeError {
     public var localizedDescription: String {
         switch self {
+        case .missingReauthenticationMethod(let context):
+            let msg = LocalizedString("There are no reauthentication methods available to perform this action.", comment: "profile change error description")
+            return msg
         case .cancelledByUser(let context):
-            let msg = "The profile change was cancelled by the user.\n\n\(context)"
+            let msg = LocalizedString("The profile change was cancelled by the user.", comment: "profile change error description")
             return msg
         case .requiresRecentSignIn(let context):
-            let msg = "This is a security sensitive action and requires a recent sign-in.\n\n\(context)"
+            let msg = LocalizedString("This is a security sensitive action and requires a recent sign-in.", comment: "profile change error description")
             return msg
         case .noSuchProvider(let context):
-            let msg = "The provider is not linked.\n\n\(context)"
+            let msg = LocalizedString("The provider is not linked.", comment: "profile change error description")
             return msg
         case .other(let message, let context):
-            let msg = "\(message).\n\n\(context)"
+            let msg = "\(message)"
             return msg
         }
     }

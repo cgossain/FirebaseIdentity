@@ -8,10 +8,10 @@
 import Foundation
 
 extension UIViewController {
-    /// Presents a simple alert with details of an `AuthenticationError`.
+    /// Presents a simple alert with details of an `AuthenticationError`..
     public func showAuthenticationErrorAlert(for error: AuthenticationError) {
-        let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+        let alert = UIAlertController(title: LocalizedString("Error", comment: "alert title"), message: error.localizedDescription, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: LocalizedString("OK", comment: "alert action title"), style: .default, handler: nil))
         present(alert, animated: true, completion: nil)
     }
     
@@ -19,10 +19,12 @@ extension UIViewController {
     public func showProfileChangeErrorAlert(for error: ProfileChangeError) {
         switch error {
         case .cancelledByUser(_):
-            break // ignore
+            // ignore
+            break
+            
         default:
-            let alert = UIAlertController(title: "Error", message: error.localizedDescription, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            let alert = UIAlertController(title: LocalizedString("Error", comment: "alert title"), message: error.localizedDescription, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: LocalizedString("OK", comment: "alert action title"), style: .default, handler: nil))
             present(alert, animated: true, completion: nil)
         }
     }

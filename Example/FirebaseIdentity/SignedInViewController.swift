@@ -41,10 +41,11 @@ class SignedInViewController: StaticTableViewController {
         
         reloadSections()
     }
+    
 }
 
 extension SignedInViewController: AuthManagerReauthenticating {
-    func authManager(_ manager: AuthManager, needsReauthenticationUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge) {
+    func authManager(_ manager: AuthManager, reauthenticateUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge) {
         // ask for reauthentication from the highest priority auth provider
         guard let provider = providers.first else {
             return

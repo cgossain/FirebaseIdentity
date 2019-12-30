@@ -38,23 +38,25 @@ public typealias AuthUnlinkHandler = (Result<User, Error>) -> Void
 /// The block that is invoked when a profile change event completes.
 public typealias ProfileChangeHandler = (Result<User, ProfileChangeError>) -> Void
 
-/// An object that provides context about the profile change that triggered the reauthentication challenge.
-public struct ProfileChangeReauthenticationChallenge {
-    /// The error context that caused the reauthentication challenge to occur.
-    public let context: ProfileChangeError.Context
-    
-    /// Interal use completion handler.
-    fileprivate let completion: ProfileChangeHandler
-}
+/// The block that is optionally invoked when the `reauthenticate()` method completes.
+public typealias ReauthenticationHandler = (AuthenticationError?) -> Void
 
+/// The block that is optionally invoked when the `requestReauthentication()` method completes.
+public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationStatus) -> Void
+
+
+
+/// A protocol for an object that is capable of reauthenticating an AuthManager.
 public protocol AuthManagerReauthenticating: class {
     /// Called when an action triggers the `requiresRecentLogin` from Firebase.
     ///
     /// - parameters:
     ///     - manager: The auth manager instance that is requesting reauthentication.
-    ///     - providers: An array of available/linked providers that should be used for reauthentication. These can either be presented as options to a user, or the first item in the list can automatically be used for reauthentication. The providers are pre-sorted according to the priority order specified in the `providerReauthenticationPriority` property.
+    ///     - providers: An array of available/linked providers that should be used for reauthentication. These can either be presented as options to a user, or the
+    ///                  first item in the list can automatically be used for reauthentication. The providers are pre-sorted according to the priority order specified in
+    ///                  the `providerReauthenticationPriority` property.
     ///     - challenge: An object that must be passed to the auth manager's `reauthenticate` method. This is required to continue/retry the action that triggered the `requiresRecentLogin` error.
-    func authManager(_ manager: AuthManager, needsReauthenticationUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
+    func authManager(_ manager: AuthManager, reauthenticateUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
 }
 
 extension AuthManager {
@@ -68,6 +70,12 @@ public class AuthManager {
         case notDetermined
         case notAuthenticated
         case authenticated
+    }
+    
+    public enum ReauthenticationStatus {
+        case success
+        case failure(ProfileChangeError)
+        case unnecessary
     }
     
     /// The shared instance.
@@ -113,8 +121,56 @@ public class AuthManager {
     /// Defaults to `[.email, .facebook]`.
     public var providerReauthenticationPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
+    /// The last authentication date of the currently signed in user (includes sign-ins and reauthentications).
+    public var lastAuthenticationDate: Date? {
+        var dates: [Date] = []
+        
+        if let lastSignInDate = authenticatedUser?.metadata.lastSignInDate {
+            dates.append(lastSignInDate)
+        }
+        
+        if let lastReauthenticationDate = lastReauthenticationDate {
+            dates.append(lastReauthenticationDate)
+        }
+        
+        let descending = dates.sorted(by: >)
+        return descending.first
+    }
+    
     
     // MARK: - Private Properties
+    /// Indicates if reauthentication will be required to perform a profile change. You can use this property to preemptively reauthenticate before performing a profile change.
+    private var needsReauthenticationForProfileChanges: Bool {
+        guard let lastAuthenticationDate = lastAuthenticationDate else {
+            return false
+        }
+        
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.minute], from: lastAuthenticationDate, to: Date())
+        
+        guard let minute = components.minute else {
+            return false
+        }
+        
+        return minute >= 5
+    }
+    
+    /// The last reauthentication date of the currently signed in user.
+    private var lastReauthenticationDate: Date? {
+        get {
+            let defaults = UserDefaults.standard
+            let d = defaults.value(forKey: "com.firebaseidentity.authmanager.lastreauthenticationdate") as? Date
+            return d
+        }
+        set {
+            let defaults = UserDefaults.standard
+            defaults.set(newValue, forKey: "com.firebaseidentity.authmanager.lastreauthenticationdate")
+        }
+    }
+    
+    /// Returns the linked email identity provider user info, otherwise returns nil if there is no linked email identity provider.
+    private var linkedEmailProviderUserInfo: IdentityProviderUserInfo? { return self.linkedProviders.filter({ $0.providerID == .email }).first }
+    
     /// An internal procedure queue for authentication procedures (i.e. sign-up, sign-in, reauthentication). This primary
     /// purpose for using procedure for authentication is that it provides a way to maintain a strong reference to the
     /// identity provider while the authentication action is in progress.
@@ -160,32 +216,6 @@ extension AuthManager {
         })
     }
     
-    public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, errorHandler: @escaping (AuthenticationError) -> Void) {
-        self.reauthenticate(with: provider) { (result) in
-            switch result {
-            case .success(_):
-                // using the information in the challenge object, we can retry the profile change that had previously failed
-                switch challenge.context.profileChangeType {
-                case .updateEmail(let email):
-                    self.updateEmail(to: email, completion: challenge.completion)
-                    
-                case .updatePassword(let password):
-                    self.updatePassword(to: password, completion: challenge.completion)
-                    
-                default:
-                    break // does not need reauthentication
-                }
-                
-            case .failure(let error):
-                errorHandler(error)
-            }
-        }
-    }
-    
-    public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
-        challenge.completion(.failure(.cancelledByUser(challenge.context)))
-    }
-    
     public func linkWith<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
         authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .linkProvider) { (result, error) in
             guard let error = error else {
@@ -196,6 +226,89 @@ extension AuthManager {
             let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .linkProvider)
             self.handleAuthProcedureFirebaseError(error, context: context, provider: provider, completion: completion)
         })
+    }
+    
+    public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, completion: ReauthenticationHandler? = nil) {
+        self.reauthenticate(with: provider) { (result) in
+            switch result {
+            case .success(_):
+                self.lastReauthenticationDate = Date()
+                completion?(nil)
+                
+                // retry the profile change attempt that failed using the error context
+                switch challenge.context.profileChangeType {
+                case .requestReauthentication:
+                    challenge.completion(.success(challenge.context.authenticatedUser))
+                    
+                case .updateEmail(let email):
+                    self.updateEmail(to: email, completion: challenge.completion)
+                    
+                case .updatePassword(let password):
+                    self.updatePassword(to: password, completion: challenge.completion)
+                    
+                default:
+                    break
+                }
+                
+            case .failure(let error):
+                completion?(error)
+                
+                // notify the completion handler associated with the challenge about the failure
+                challenge.completion(.failure(.other(error.localizedDescription, challenge.context)))
+            }
+        }
+    }
+    
+    /// Cancels the reauthentication linked to the given challenge object.
+    public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
+        challenge.completion(.failure(.cancelledByUser(challenge.context)))
+    }
+    
+    /// Reauthenticates using the linked email provider using the provided password. If there is no email identity provider linked, requests reauthentication via the `reauthenticator` object.
+    public func requestReauthentication(passwordForReauthentication: String? = nil, completion: @escaping ReauthenticationRequestHandler) {
+        guard let authenticatedUser = authenticatedUser else {
+            return
+        }
+        
+        if !needsReauthenticationForProfileChanges {
+            completion(.unnecessary)
+            return
+        }
+        
+        let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .requestReauthentication)
+        if let passwordForReauthentication = passwordForReauthentication,
+            let linkedEmailProviderUserInfo = linkedEmailProviderUserInfo,
+            let email = linkedEmailProviderUserInfo.email {
+            let challenge = ProfileChangeReauthenticationChallenge(context: context) { (result) in
+                switch result {
+                case .success(_):
+                    completion(.success)
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+            
+            // attempt silently reauthenticating via the linked email provider
+            // using the provided password
+            let provider = EmailIdentityProvider(email: email, password: passwordForReauthentication)
+            reauthenticate(with: provider, for: challenge)
+        }
+        else if let reauthenticator = reauthenticator {
+            // 1. notify the delegate that we need to reauthenticate
+            // 2. after a successful reauthentication, we need to continue the profile change and eventually call the completion handler
+            let challenge = ProfileChangeReauthenticationChallenge(context: context) { (result) in
+                switch result {
+                case .success(_):
+                    completion(.success)
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+            reauthenticator.authManager(self, reauthenticateUsing: self.linkedProviders, challenge: challenge)
+        }
+        else {
+            completion(.failure(.missingReauthenticationMethod(context)))
+        }
     }
 }
 
@@ -319,6 +432,7 @@ extension AuthManager {
             else {
                 self.authenticatedUser = nil
                 self.authenticationState = .notAuthenticated
+                self.lastReauthenticationDate = nil
             }
             
             NotificationCenter.default.post(name: AuthManager.authenticationStateChangedNotification, object: self, userInfo: nil)
@@ -413,20 +527,21 @@ extension AuthManager {
     private func handleProfileChangeFirebaseError(_ error: Error, context: ProfileChangeError.Context, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.requiresRecentLogin.rawValue {
-                if let passwordForReauthentication = passwordForReauthentication, let emailProviderUserInfo = self.linkedProviders.filter({ $0.providerID == .email }).first, let email = emailProviderUserInfo.email {
+                if let passwordForReauthentication = passwordForReauthentication,
+                    let linkedEmailProviderUserInfo = linkedEmailProviderUserInfo,
+                    let email = linkedEmailProviderUserInfo.email {
                     let challenge = ProfileChangeReauthenticationChallenge(context: context, completion: completion)
                     
-                    // attempt reauthenticating silently with the provided password
+                    // attempt silently reauthenticating via the linked email provider
+                    // using the provided password
                     let provider = EmailIdentityProvider(email: email, password: passwordForReauthentication)
-                    self.reauthenticate(with: provider, for: challenge) { (reauthError) in
-                        completion(.failure(.other(reauthError.localizedDescription, context)))
-                    }
+                    reauthenticate(with: provider, for: challenge)
                 }
                 else if let reauthenticator = reauthenticator {
                     // 1. notify the delegate that we need to reauthenticate
                     // 2. after a successful reauthentication, we need to continue the profile change and eventually call the completion handler
                     let challenge = ProfileChangeReauthenticationChallenge(context: context, completion: completion)
-                    reauthenticator.authManager(self, needsReauthenticationUsing: self.linkedProviders, challenge: challenge)
+                    reauthenticator.authManager(self, reauthenticateUsing: self.linkedProviders, challenge: challenge)
                 }
                 else {
                     completion(.failure(.requiresRecentSignIn(context)))
