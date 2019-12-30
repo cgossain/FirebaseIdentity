@@ -108,19 +108,19 @@ extension ProfileChangeError.Context.ProfileChangeType {
 extension ProfileChangeError {
     public var localizedDescription: String {
         switch self {
-        case .missingReauthenticationMethod(let context):
+        case .missingReauthenticationMethod(_):
             let msg = LocalizedString("There are no reauthentication methods available to perform this action.", comment: "profile change error description")
             return msg
-        case .cancelledByUser(let context):
+        case .cancelledByUser(_):
             let msg = LocalizedString("The profile change was cancelled by the user.", comment: "profile change error description")
             return msg
-        case .requiresRecentSignIn(let context):
+        case .requiresRecentSignIn(_):
             let msg = LocalizedString("This is a security sensitive action and requires a recent sign-in.", comment: "profile change error description")
             return msg
-        case .noSuchProvider(let context):
+        case .noSuchProvider(_):
             let msg = LocalizedString("The provider is not linked.", comment: "profile change error description")
             return msg
-        case .other(let message, let context):
+        case .other(let message, _):
             let msg = "\(message)"
             return msg
         }

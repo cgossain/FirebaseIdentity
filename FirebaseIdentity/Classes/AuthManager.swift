@@ -116,10 +116,6 @@ public class AuthManager {
         }
     }
     
-    /// The order of priority that identity providers should be used for reauthentication when available.
-    ///
-    /// Defaults to `[.email, .facebook]`.
-    public var providerReauthenticationPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
     /// The last authentication date of the currently signed in user (includes sign-ins and reauthentications).
     public var lastAuthenticationDate: Date? {
@@ -136,6 +132,12 @@ public class AuthManager {
         let descending = dates.sorted(by: >)
         return descending.first
     }
+    
+    
+    /// The order of priority that identity providers should be used for reauthentication when available.
+    ///
+    /// Defaults to `[.email, .facebook]`.
+    public var providerReauthenticationPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
     
     // MARK: - Private Properties

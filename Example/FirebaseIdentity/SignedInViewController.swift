@@ -63,9 +63,12 @@ extension SignedInViewController: AuthManagerReauthenticating {
             for password in Set(AuthManager.debugEmailProviderUsers.map({ $0.password })) {
                 alert.addAction(UIAlertAction(title: password, style: .default, handler: { (action) in
                     let provider = EmailIdentityProvider(email: email, password: password)
-                    manager.reauthenticate(with: provider, for: challenge, errorHandler: { (error) in
+                    manager.reauthenticate(with: provider, for: challenge) { (error) in
+                        guard let error = error else {
+                            return
+                        }
                         self.showAuthenticationErrorAlert(for: error)
-                    })
+                    }
                 }))
             }
             
@@ -77,9 +80,12 @@ extension SignedInViewController: AuthManagerReauthenticating {
                     return
                 }
                 let provider = FaceboookIdentityProvider(accessToken: token)
-                manager.reauthenticate(with: provider, for: challenge, errorHandler: { (error) in
+                manager.reauthenticate(with: provider, for: challenge) { (error) in
+                    guard let error = error else {
+                        return
+                    }
                     self.showAuthenticationErrorAlert(for: error)
-                })
+                }
             }
         default:
             print("undefined provider")
