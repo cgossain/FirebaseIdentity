@@ -26,11 +26,26 @@ public struct IdentityProviderID: RawRepresentable {
     }
 }
 
-extension IdentityProviderID: Hashable, Equatable {
-    public var hashValue: Int { return rawValue.hashValue }
-    
+extension IdentityProviderID: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .email:
+            return LocalizedString("Email", comment: "identity provider name")
+        case .facebook:
+            return LocalizedString("Facebook", comment: "identity provider name")
+        default:
+            return "undefined"
+        }
+    }
+}
+
+extension IdentityProviderID: Equatable, Hashable {
     public static func ==(lhs: IdentityProviderID, rhs: IdentityProviderID) -> Bool {
         return lhs.rawValue == rhs.rawValue
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(rawValue)
     }
 }
 

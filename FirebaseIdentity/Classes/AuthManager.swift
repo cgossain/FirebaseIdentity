@@ -261,12 +261,10 @@ extension AuthManager {
         }
     }
     
-    /// Cancels the reauthentication linked to the given challenge object.
     public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
         challenge.completion(.failure(.cancelledByUser(challenge.context)))
     }
     
-    /// Reauthenticates using the linked email provider using the provided password. If there is no email identity provider linked, requests reauthentication via the `reauthenticator` object.
     public func requestReauthentication(passwordForReauthentication: String? = nil, completion: @escaping ReauthenticationRequestHandler) {
         guard let authenticatedUser = authenticatedUser else {
             return
@@ -315,7 +313,7 @@ extension AuthManager {
 }
 
 extension AuthManager {
-    public func updateDispalyName(to newDisplayName: String, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
+    public func updateDisplayName(to newDisplayName: String, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
         guard let authenticatedUser = authenticatedUser else {
             return
         }
@@ -325,10 +323,9 @@ extension AuthManager {
         profileChangeRequest.commitChanges { (error) in
             guard let error = error else {
                 // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
+                authenticatedUser.reload() { (_) in
                     completion(.success(authenticatedUser))
-                })
+                }
                 return
             }
 
@@ -350,10 +347,9 @@ extension AuthManager {
         authenticatedUser.updateEmail(to: newEmail) { (error) in
             guard let error = error else {
                 // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
+                authenticatedUser.reload() { (_) in
                     completion(.success(authenticatedUser))
-                })
+                }
                 return
             }
 
@@ -375,10 +371,9 @@ extension AuthManager {
         authenticatedUser.updatePassword(to: newPassword) { (error) in
             guard let error = error else {
                 // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
+                authenticatedUser.reload() { (_) in
                     completion(.success(authenticatedUser))
-                })
+                }
                 return
             }
             
@@ -392,18 +387,24 @@ extension AuthManager {
             return
         }
         
-        authenticatedUser.unlink(fromProvider: providerID.rawValue) { (user, error) in
-            guard let error = error else {
-                // ensure the user is refreshed
-                authenticatedUser.reload(completion: { (_) in
-                    // a reload error is irrelevant, the update was successful regardless of the reload
-                    completion(.success(authenticatedUser))
-                })
-                return
-            }
-            
+        // first validate that the user will still have other sign-in options available if the unlinking is allowed to continue
+        if linkedProviders.filter({$0.providerID != providerID }).isEmpty {
             let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkFromProvider(providerID))
-            self.handleProfileChangeFirebaseError(error, context: context, completion: completion)
+            completion(.failure(.requiresAtLeastOneSignInMethod(context)))
+        }
+        else {
+            authenticatedUser.unlink(fromProvider: providerID.rawValue) { (user, error) in
+                guard let error = error else {
+                    // ensure the user is refreshed
+                    authenticatedUser.reload() { (_) in
+                        completion(.success(authenticatedUser))
+                    }
+                    return
+                }
+                
+                let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .unlinkFromProvider(providerID))
+                self.handleProfileChangeFirebaseError(error, context: context, completion: completion)
+            }
         }
     }
     

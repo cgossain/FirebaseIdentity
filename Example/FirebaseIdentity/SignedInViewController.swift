@@ -123,6 +123,31 @@ fileprivate extension SignedInViewController {
     }
     
     var accountSection: Section {
+        var displayNameRow = Row(text: "Update Display Name", cellClass: Value1Cell.self)
+        displayNameRow.detailText = AuthManager.shared.authenticatedUser?.displayName ?? "n/a"
+        displayNameRow.accessory = .disclosureIndicator
+        displayNameRow.selection = { [unowned self] in
+            let alert = UIAlertController(title: "Update Display Name", message: "Pick a display name to use", preferredStyle: .actionSheet)
+            for name in AuthManager.debugDisplayNameUpdate {
+                alert.addAction(UIAlertAction(title: name, style: .default, handler: { (action) in
+                    AuthManager.shared.updateDisplayName(to: name) { (result) in
+                        switch result {
+                        case .success(let value):
+                            DispatchQueue.main.async {
+                                print("Display Name Updated Successfully: \(value)")
+                                self.reloadSections()
+                            }
+                        case .failure(let error):
+                            self.showProfileChangeErrorAlert(for: error)
+                        }
+                    }
+                }))
+            }
+            
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+        }
+        
         let isEmailSet = AuthManager.shared.authenticatedUser?.email != nil
         var emailRow = Row(text: isEmailSet ? "Update Email" : "Set Email", cellClass: Value1Cell.self)
         emailRow.detailText = AuthManager.shared.authenticatedUser?.email ?? "n/a"
@@ -177,7 +202,7 @@ fileprivate extension SignedInViewController {
             self.present(alert, animated: true, completion: nil)
         }
         
-        let isEmailProviderLinked = AuthManager.shared.linkedProviders.filter({ $0.providerID == .email }).first != nil
+        let isEmailProviderLinked = AuthManager.shared.linkedProviders.map({ $0.providerID }).contains(.email)
         var passwordRow = Row(text: isEmailProviderLinked ? "Update Password" : "Set Password", cellClass: Value1Cell.self)
         passwordRow.accessory = .disclosureIndicator
         passwordRow.selection = { [unowned self] in
@@ -255,62 +280,89 @@ fileprivate extension SignedInViewController {
                 })
             }
             else {
-                // user must have at least 1 remaining auth provider after unlinking
-                if AuthManager.shared.linkedProviders.filter({ $0.providerID != .facebook }).isEmpty {
-                    // the user won't have a way to sign into their account if we proceed; user needs to set another auth method before proceeding
-                    if let authenticatedUser = AuthManager.shared.authenticatedUser, authenticatedUser.email == nil {
-                        self.showAlert(withTitle: "Add a Provider", message: "You need to set an email and password before unlinking your Facebook account.")
+                AuthManager.shared.unlinkFrom(providerID: .facebook, completion: { (result) in
+                    switch result {
+                    case .success(let user):
+                        print("Facebook successfully unlinked from \(user.description)")
+                        self.reloadSections()
+                        
+                    case .failure(let error):
+                        self.showProfileChangeErrorAlert(for: error)
+                        self.reloadSections() // resets switch state
                     }
-                    else {
-                        self.showAlert(withTitle: "Add a Provider", message: "You need to set a password before unlinking your Facebook account.")
-                    }
-                    
-                    self.reloadSections() // resets switch state
-                }
-                else {
-                    // there are still other auth providers linked to the users account; it's safe to unlink
-                    AuthManager.shared.unlinkFrom(providerID: .facebook, completion: { (result) in
-                        switch result {
-                        case .success(let user):
-                            print("Facebook successfully unlinked from \(user.description)")
-                            self.reloadSections()
-                            
-                        case .failure(let error):
-                            self.showAlert(for: error)
-                            self.reloadSections() // resets switch state
-                        }
-                    })
-                }
+                })
+                
+//                // user must have at least 1 remaining auth provider after unlinking
+//                if AuthManager.shared.linkedProviders.filter({ $0.providerID != .facebook }).isEmpty {
+//                    // the user won't have a way to sign into their account if we proceed; user needs to set another auth method before proceeding
+//                    if let authenticatedUser = AuthManager.shared.authenticatedUser, authenticatedUser.email == nil {
+//                        self.showAlert(withTitle: "Add a Provider", message: "You need to set an email and password before unlinking your Facebook account.")
+//                    }
+//                    else {
+//                        self.showAlert(withTitle: "Add a Provider", message: "You need to set a password before unlinking your Facebook account.")
+//                    }
+//
+//                    self.reloadSections() // resets switch state
+//                }
+//                else {
+//                    // there are still other auth providers linked to the users account; it's safe to unlink
+//                    AuthManager.shared.unlinkFrom(providerID: .facebook, completion: { (result) in
+//                        switch result {
+//                        case .success(let user):
+//                            print("Facebook successfully unlinked from \(user.description)")
+//                            self.reloadSections()
+//
+//                        case .failure(let error):
+//                            self.showAlert(for: error)
+//                            self.reloadSections() // resets switch state
+//                        }
+//                    })
+//                }
             }
         })
         
-        var displayNameRow = Row(text: "Update Display Name", cellClass: Value1Cell.self)
-        displayNameRow.detailText = AuthManager.shared.authenticatedUser?.displayName ?? "n/a"
-        displayNameRow.accessory = .disclosureIndicator
-        displayNameRow.selection = { [unowned self] in
-            let alert = UIAlertController(title: "Update Display Name", message: "Pick a display name to use", preferredStyle: .actionSheet)
-            for name in AuthManager.debugDisplayNameUpdate {
-                alert.addAction(UIAlertAction(title: name, style: .default, handler: { (action) in
-                    AuthManager.shared.updateDispalyName(to: name) { (result) in
-                        switch result {
-                        case .success(let value):
-                            DispatchQueue.main.async {
-                                print("Display Name Updated Successfully: \(value)")
-                                self.reloadSections()
-                            }
-                        case .failure(let error):
-                            self.showProfileChangeErrorAlert(for: error)
-                        }
-                    }
-                }))
-            }
-            
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
-            self.present(alert, animated: true, completion: nil)
-        }
+//        let email = AuthManager.shared.linkedProviders.filter({ $0.providerID == .email }).compactMap({ $0.email }).first
+//        var linkEmailRow = Row(text: "Email", cellClass: SubtitleCell.self)
+//        linkEmailRow.detailText = email
+//        linkEmailRow.accessory = .switchToggle(value: isEmailProviderLinked, { [unowned self] (isOn) in
+//            if isOn {
+//                // link to facebook
+//                // 1. get an access token
+//                // 2. link
+//                self.fetchFacebookAccessTokenForReauthentication(withCompletionHandler: { (token) in
+//                    if let token = token {
+//                        let provider = FaceboookIdentityProvider(accessToken: token)
+//                        AuthManager.shared.linkWith(with: provider, completion: { (result) in
+//                            switch result {
+//                            case .success(let authDataResult):
+//                                print("Facebook successfully linked with \(authDataResult.user.description)")
+//                                self.reloadSections()
+//
+//                            case .failure(let error):
+//                                self.showAuthenticationErrorAlert(for: error)
+//                                self.reloadSections() // resets switch state
+//                            }
+//                        })
+//                    }
+//                })
+//            }
+//            else {
+//                AuthManager.shared.unlinkFrom(providerID: .facebook, completion: { (result) in
+//                    switch result {
+//                    case .success(let user):
+//                        print("Facebook successfully unlinked from \(user.description)")
+//                        self.reloadSections()
+//
+//                    case .failure(let error):
+//                        self.showAlert(for: error)
+//                        self.reloadSections() // resets switch state
+//                    }
+//                })
+//            }
+//        })
         
         return Section(header: .title("Account"),
-                       rows: [emailRow, emailSilentReauthRow, passwordRow, passwordSilentReauthRow, linkFacebookRow, displayNameRow])
+                       rows: [displayNameRow, emailRow, emailSilentReauthRow, passwordRow, passwordSilentReauthRow, linkFacebookRow])
     }
     
     var linkedProvidersSection: Section {
@@ -340,7 +392,7 @@ fileprivate extension SignedInViewController {
                 case .success(_):
                     print("User deleted successfully")
                 case .failure(let error):
-                    self.showAlert(for: error)
+                    self.showProfileChangeErrorAlert(for: error)
                 }
             })
         }

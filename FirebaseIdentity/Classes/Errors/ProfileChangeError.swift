@@ -54,17 +54,6 @@ public enum ProfileChangeError: Error {
         }
     }
     
-    /// Indicates that a reauthentication request could not be completed due to reauthentication methods not being available.
-    ///
-    /// Specifically this would be triggered when the `requestReauthentication()` method is used. This can happen
-    /// if a `passwordForReauthentication` is provided but there is no linked email identity provider associated with
-    /// the currently authenticated user. This can also be triggered if a `reauthenticator` object has not been set.
-    case missingReauthenticationMethod(ProfileChangeError.Context)
-    
-    /// Indicates that the profile change was cancelled by the user.
-    ///
-    /// As an associated value, this case contains the context for debugging.
-    case cancelledByUser(ProfileChangeError.Context)
     
     /// Can be trigged by Firebase error 17014
     ///
@@ -84,6 +73,25 @@ public enum ProfileChangeError: Error {
     /// As an associated value, this case contains the context for debugging.
     case noSuchProvider(ProfileChangeError.Context)
     
+    /// Indicates that an attempt was made to unlink the only linked identity provider.
+    ///
+    /// The user must always have at least one associated identity provider. To handle this error, the user should ensure both an email and password are set to configure the email provider (which can't be unlinked).
+    ///
+    /// As an associated value, this case contains the context for debugging.
+    case requiresAtLeastOneSignInMethod(ProfileChangeError.Context)
+    
+    /// Indicates that a reauthentication request could not be completed due to reauthentication methods not being available.
+    ///
+    /// Specifically this would be triggered when the `requestReauthentication()` method is used. This can happen
+    /// if a `passwordForReauthentication` is provided but there is no linked email identity provider associated with
+    /// the currently authenticated user. This can also be triggered if a `reauthenticator` object has not been set.
+    case missingReauthenticationMethod(ProfileChangeError.Context)
+    
+    /// Indicates that the profile change was cancelled by the user.
+    ///
+    /// As an associated value, this case contains the context for debugging.
+    case cancelledByUser(ProfileChangeError.Context)
+    
     /// An indication that a general error has occured.
     ///
     /// As an associated value, this case contains the error message and context for debugging.
@@ -93,12 +101,14 @@ public enum ProfileChangeError: Error {
 extension ProfileChangeError.Context.ProfileChangeType {
     public var attemptedValue: String {
         switch self {
+        case .updateDisplayName(let dp):
+            return dp
         case .updateEmail(let email):
             return email
         case .updatePassword(let password):
             return password
         case .unlinkFromProvider(let providerID):
-            return providerID.rawValue
+            return providerID.description
         default:
             return "n/a"
         }
@@ -108,17 +118,22 @@ extension ProfileChangeError.Context.ProfileChangeType {
 extension ProfileChangeError {
     public var localizedDescription: String {
         switch self {
-        case .missingReauthenticationMethod(_):
-            let msg = LocalizedString("There are no reauthentication methods available to perform this action.", comment: "profile change error description")
-            return msg
-        case .cancelledByUser(_):
-            let msg = LocalizedString("The profile change was cancelled by the user.", comment: "profile change error description")
-            return msg
         case .requiresRecentSignIn(_):
             let msg = LocalizedString("This is a security sensitive action and requires a recent sign-in.", comment: "profile change error description")
             return msg
         case .noSuchProvider(_):
             let msg = LocalizedString("The provider is not linked.", comment: "profile change error description")
+            return msg
+        case .requiresAtLeastOneSignInMethod(let context):
+            let providerDescription = context.profileChangeType.attemptedValue
+            let msgFormat = LocalizedString("You must have at least one sign-in method enabled. Please enable another sign-in method before unlinking your %@ account.", comment: "profile change error description")
+            let msg = String(format: msgFormat, providerDescription)
+            return msg
+        case .missingReauthenticationMethod(_):
+            let msg = LocalizedString("There are no reauthentication methods available to perform this action.", comment: "profile change error description")
+            return msg
+        case .cancelledByUser(_):
+            let msg = LocalizedString("The profile change was cancelled by the user.", comment: "profile change error description")
             return msg
         case .other(let message, _):
             let msg = "\(message)"
