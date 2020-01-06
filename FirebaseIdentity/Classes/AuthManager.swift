@@ -248,6 +248,9 @@ extension AuthManager {
                 case .updatePassword(let password):
                     self.updatePassword(to: password, completion: challenge.completion)
                     
+                case .deleteAccount:
+                    self.deleteAccount(with: challenge.completion)
+                    
                 default:
                     break
                 }
