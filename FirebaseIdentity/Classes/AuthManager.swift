@@ -11,21 +11,6 @@ import FirebaseCore
 import FirebaseAuth
 import ProcedureKit
 
-public enum Result<Value, Error: Swift.Error> {
-    case success(Value)
-    case failure(Error)
-}
-
-public extension Result {
-    func resolve() throws -> Value {
-        switch self {
-        case .success(let value):
-            return value
-        case .failure(let error):
-            throw error
-        }
-    }
-}
 
 /// The block that is invoked when an authentication related event completes. The parameter
 /// passed to the block is an `AuthManager.Result` object that may indicate that a
