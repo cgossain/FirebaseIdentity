@@ -164,9 +164,21 @@ public class AuthManager {
     /// The primary purpose for using procedure for authentication is that it provides a way to maintain a strong reference to the
     /// identity provider while the authentication action is in progress. An additional benefit is that a serial queue allows us
     /// to run tasks in the same order they are submitted.
-    private var queue: ProcedureQueue = {
+    private var authenticationQueue: ProcedureQueue = {
         let queue = ProcedureQueue()
-        queue.name = "com.firebaseIdentity.authManager.authManagerProcedureQueue"
+        queue.name = "com.firebaseIdentity.authManager.authenticationQueue"
+        queue.maxConcurrentOperationCount = 1
+        return queue
+    }()
+    
+    /// Seprate internal queue for running the `DeleteAccountOperation`.
+    ///
+    /// This operation uses sub-operations that use the `authenticationQueue`. Since this is a serial queue, these operations would be
+    /// blocked until the `DeleteAccountOperation` and so on. In other words, all execution would be paused. A separate serial queue
+    /// solves this issue.
+    private var accountDeletionQueue: ProcedureQueue = {
+        let queue = ProcedureQueue()
+        queue.name = "com.firebaseIdentity.authManager.accountDeletionQueue"
         queue.maxConcurrentOperationCount = 1
         return queue
     }()
@@ -183,7 +195,7 @@ public class AuthManager {
 
 extension AuthManager {
     public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        queue.addOperation(AuthOperation(provider: provider, authenticationType: .signUp) { (result, error) in
+        authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .signUp) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
@@ -195,7 +207,7 @@ extension AuthManager {
     }
     
     public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        queue.addOperation(AuthOperation(provider: provider, authenticationType: .signIn) { (result, error) in
+        authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .signIn) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
@@ -207,7 +219,7 @@ extension AuthManager {
     }
     
     public func linkWith<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        queue.addOperation(AuthOperation(provider: provider, authenticationType: .linkProvider) { (result, error) in
+        authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .linkProvider) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
@@ -401,18 +413,15 @@ extension AuthManager {
     
     public func deleteAccount(with op: DeleteAccountOperation) {
         // raise flag
-        queue.addOperation {
-            self.isDeletingUserAccount = true
-        }
+        accountDeletionQueue.addOperation { self.isDeletingUserAccount = true }
         
-        // add op
-        queue.addOperation(op)
+        // add account deletion op
+        accountDeletionQueue.addOperation(op)
         
         // lower flag
-        queue.addOperation {
-            self.isDeletingUserAccount = false
-        }
+        accountDeletionQueue.addOperation { self.isDeletingUserAccount = false }
     }
+    
 }
 
 extension AuthManager {
@@ -451,7 +460,7 @@ extension AuthManager {
     }
     
     private func reauthenticate<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        queue.addOperation(AuthOperation(provider: provider, authenticationType: .reauthenticate) { (result, error) in
+        authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .reauthenticate) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
