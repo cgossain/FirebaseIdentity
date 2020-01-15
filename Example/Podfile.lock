@@ -53,7 +53,7 @@ PODS:
     - FirebaseAuthInterop (~> 1.0)
     - FirebaseCore (~> 6.0)
     - leveldb-library (~> 1.22)
-  - FirebaseIdentity (0.1.0):
+  - FirebaseIdentity (0.2.0):
     - Firebase/Auth
     - Firebase/Core
     - Firebase/Database
@@ -148,7 +148,7 @@ SPEC CHECKSUMS:
   FirebaseCoreDiagnostics: 511f4f3ed7d440bb69127e8b97c2bc8befae639e
   FirebaseCoreDiagnosticsInterop: e9b1b023157e3a2fc6418b5cb601e79b9af7b3a0
   FirebaseDatabase: 9db0c9bb6d3308870cc831a8a6d70c82fd169f37
-  FirebaseIdentity: 1115db32548ecdc1ac6f4b6faa4db354e0a56b16
+  FirebaseIdentity: bf34793cc750635b20f66b7a4dca78ac5d635b3f
   FirebaseInstanceID: ce993a3c3670a8f5d47ce371ac5d143c560608c5
   GoogleAppMeasurement: db118eb61a97dd8c4f7014e368d3c335cbbcf80a
   GoogleDataTransport: 8e9b210c97d55fbff306cc5468ff91b9cb32dcf5
