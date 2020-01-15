@@ -14,5 +14,6 @@ TODO: Add long description of the pod here.
   s.source_files = 'FirebaseIdentity/Classes/**/*'
   s.dependency 'Firebase/Core'
   s.dependency 'Firebase/Auth'
+  s.dependency 'Firebase/Database'
   s.dependency 'ProcedureKit'
 end

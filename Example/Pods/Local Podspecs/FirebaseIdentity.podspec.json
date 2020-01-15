@@ -27,6 +27,9 @@
     "Firebase/Auth": [
 
     ],
+    "Firebase/Database": [
+
+    ],
     "ProcedureKit": [
 
     ]

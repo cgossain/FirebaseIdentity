@@ -1,6 +1,6 @@
 //
-//  AuthProcedure.swift
-//  AppController
+//  AuthOperation.swift
+//  FirebaseIdentity
 //
 //  Created by Christian Gossain on 2019-08-08.
 //
@@ -9,7 +9,7 @@ import ProcedureKit
 import FirebaseCore
 import FirebaseAuth
 
-final class AuthProcedure<P: IdentityProvider>: Procedure {
+final class AuthOperation<P: IdentityProvider>: Procedure {
     let provider: P
     let authenticationType: AuthenticationType
     let completion: AuthDataResultCallback

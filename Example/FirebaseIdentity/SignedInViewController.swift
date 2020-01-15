@@ -387,14 +387,17 @@ fileprivate extension SignedInViewController {
     var deleteAccountSection: Section {
         var deleteAccountRow = Row(text: "Delete Account", cellClass: Value1Cell.self)
         deleteAccountRow.selection = {
-            AuthManager.shared.deleteAccount(with: { (result) in
+            let deleteAccountOp = DeleteAccountOperation(refs: [])
+            deleteAccountOp.deleteAccountCompletionBlock = { (result) in
                 switch result {
-                case .success(_):
-                    print("User deleted successfully")
+                case .success(let user):
+                    print("User Deleted Duccessfully: \(user)")
+                    
                 case .failure(let error):
-                    self.showProfileChangeErrorAlert(for: error)
+                    self.showDeleteAccountOperationErrorAlert(for: error)
                 }
-            })
+            }
+            AuthManager.shared.deleteAccount(with: deleteAccountOp)
         }
         return Section(rows: [deleteAccountRow])
     }

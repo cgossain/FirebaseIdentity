@@ -29,7 +29,6 @@ public typealias ReauthenticationHandler = (AuthenticationError?) -> Void
 /// The block that is optionally invoked when the `requestReauthentication()` method completes.
 public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationStatus) -> Void
 
-
 /// A protocol for an object that is capable of reauthenticating an AuthManager.
 public protocol AuthManagerReauthenticating: class {
     /// Called when an action triggers the `requiresRecentLogin` from Firebase.
@@ -42,7 +41,6 @@ public protocol AuthManagerReauthenticating: class {
     ///     - challenge: An object that must be passed to the auth manager's `reauthenticate` method. This is required to continue/retry the action that triggered the `requiresRecentLogin` error.
     func authManager(_ manager: AuthManager, reauthenticateUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
 }
-
 
 extension AuthManager {
     /// Posted on the main queue when the authentication state changes.
@@ -74,6 +72,9 @@ public class AuthManager {
     
     /// The currently authenticated user, or nil if user is not authenticated.
     public private(set) var authenticatedUser: User?
+    
+    /// Indicates if the user account is currently in the process of being deleted.
+    public private(set) var isDeletingUserAccount = false
     
     /// The list of identity providers associated with the currently authenticated user.
     ///
@@ -158,12 +159,14 @@ public class AuthManager {
     /// Returns the linked email identity provider user info, otherwise returns nil if there is no linked email identity provider.
     private var linkedEmailProviderUserInfo: IdentityProviderUserInfo? { return self.linkedProviders.filter({ $0.providerID == .email }).first }
     
-    /// An internal procedure queue for authentication procedures (i.e. sign-up, sign-in, reauthentication). This primary
-    /// purpose for using procedure for authentication is that it provides a way to maintain a strong reference to the
-    /// identity provider while the authentication action is in progress.
-    private var authenticationProcedureQueue: ProcedureQueue = {
+    /// An internal procedure queue for authentication procedures (i.e. sign-up, sign-in, reauthentication, etc).
+    ///
+    /// The primary purpose for using procedure for authentication is that it provides a way to maintain a strong reference to the
+    /// identity provider while the authentication action is in progress. An additional benefit is that a serial queue allows us
+    /// to run tasks in the same order they are submitted.
+    private var queue: ProcedureQueue = {
         let queue = ProcedureQueue()
-        queue.name = "com.firebaseIdentity.authManager.authenticationProcedureQueue"
+        queue.name = "com.firebaseIdentity.authManager.authManagerProcedureQueue"
         queue.maxConcurrentOperationCount = 1
         return queue
     }()
@@ -180,7 +183,7 @@ public class AuthManager {
 
 extension AuthManager {
     public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .signUp) { (result, error) in
+        queue.addOperation(AuthOperation(provider: provider, authenticationType: .signUp) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
@@ -192,7 +195,7 @@ extension AuthManager {
     }
     
     public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .signIn) { (result, error) in
+        queue.addOperation(AuthOperation(provider: provider, authenticationType: .signIn) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
@@ -204,7 +207,7 @@ extension AuthManager {
     }
     
     public func linkWith<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .linkProvider) { (result, error) in
+        queue.addOperation(AuthOperation(provider: provider, authenticationType: .linkProvider) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
@@ -396,7 +399,24 @@ extension AuthManager {
         }
     }
     
-    public func deleteAccount(with completion: @escaping ProfileChangeHandler) {
+    public func deleteAccount(with op: DeleteAccountOperation) {
+        // raise flag
+        queue.addOperation {
+            self.isDeletingUserAccount = true
+        }
+        
+        // add op
+        queue.addOperation(op)
+        
+        // lower flag
+        queue.addOperation {
+            self.isDeletingUserAccount = false
+        }
+    }
+}
+
+extension AuthManager {
+    func deleteAccount(with completion: @escaping ProfileChangeHandler) {
         guard let authenticatedUser = authenticatedUser else {
             return
         }
@@ -431,7 +451,7 @@ extension AuthManager {
     }
     
     private func reauthenticate<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
-        authenticationProcedureQueue.addOperation(AuthProcedure(provider: provider, authenticationType: .reauthenticate) { (result, error) in
+        queue.addOperation(AuthOperation(provider: provider, authenticationType: .reauthenticate) { (result, error) in
             guard let error = error else {
                 completion(.success(result!))
                 return
