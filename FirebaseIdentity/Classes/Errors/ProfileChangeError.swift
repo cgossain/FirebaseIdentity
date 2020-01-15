@@ -98,25 +98,8 @@ public enum ProfileChangeError: Error {
     case other(String, ProfileChangeError.Context)
 }
 
-extension ProfileChangeError.Context.ProfileChangeType {
-    public var attemptedValue: String {
-        switch self {
-        case .updateDisplayName(let dp):
-            return dp
-        case .updateEmail(let email):
-            return email
-        case .updatePassword(let password):
-            return password
-        case .unlinkFromProvider(let providerID):
-            return providerID.description
-        default:
-            return "n/a"
-        }
-    }
-}
-
-extension ProfileChangeError {
-    public var localizedDescription: String {
+extension ProfileChangeError: LocalizedError {
+    public var errorDescription: String? {
         switch self {
         case .requiresRecentSignIn(_):
             let msg = LocalizedString("This is a security sensitive action and requires a recent sign-in.", comment: "profile change error description")
@@ -138,6 +121,23 @@ extension ProfileChangeError {
         case .other(let message, _):
             let msg = "\(message)"
             return msg
+        }
+    }
+}
+
+extension ProfileChangeError.Context.ProfileChangeType {
+    public var attemptedValue: String {
+        switch self {
+        case .updateDisplayName(let dp):
+            return dp
+        case .updateEmail(let email):
+            return email
+        case .updatePassword(let password):
+            return password
+        case .unlinkFromProvider(let providerID):
+            return providerID.description
+        default:
+            return "n/a"
         }
     }
 }

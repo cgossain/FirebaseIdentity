@@ -30,7 +30,6 @@ public typealias ReauthenticationHandler = (AuthenticationError?) -> Void
 public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationStatus) -> Void
 
 
-
 /// A protocol for an object that is capable of reauthenticating an AuthManager.
 public protocol AuthManagerReauthenticating: class {
     /// Called when an action triggers the `requiresRecentLogin` from Firebase.
@@ -43,6 +42,7 @@ public protocol AuthManagerReauthenticating: class {
     ///     - challenge: An object that must be passed to the auth manager's `reauthenticate` method. This is required to continue/retry the action that triggered the `requiresRecentLogin` error.
     func authManager(_ manager: AuthManager, reauthenticateUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
 }
+
 
 extension AuthManager {
     /// Posted on the main queue when the authentication state changes.

@@ -75,8 +75,8 @@ public enum AuthenticationError: Error {
     case other(String, AuthenticationError.Context)
 }
 
-extension AuthenticationError {
-    public var localizedDescription: String {
+extension AuthenticationError: LocalizedError {
+    public var errorDescription: String? {
         switch self {
         case .requiresAccountLinking(_, _):
             let msg = LocalizedString("Account linking required.", comment: "auth error description")
