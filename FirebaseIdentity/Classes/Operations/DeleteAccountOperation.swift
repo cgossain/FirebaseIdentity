@@ -1,8 +1,25 @@
 //
 //  DeleteAccountOperation.swift
-//  MooveFitCoreKit
 //
-//  Created by Christian Gossain on 2020-01-13.
+//  Copyright (c) 2019-2020 Christian Gossain
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//  THE SOFTWARE.
 //
 
 import Foundation
@@ -111,7 +128,11 @@ final public class DeleteAccountOperation: Procedure {
             }
         }
         
-        // 1. request reauthentication
+        // 1. opportunistically reauthenticate the user
+        // if we don't force the user to reauthenticate prior to starting the account deletion process
+        // we could potentially end up deleting all the user's data and then run into a "requiresRecentLogin"
+        // error out when deleting the firebase account; to avoid this, and to make this process as smooth as
+        // possible we can require reauthentication before starting this process
         let requestReauthenticationOp = RequestReauthenticationOperation()
         requestReauthenticationOp.requestReauthenticationCompletionBlock = { (profileChangeError) in
             if let profileChangeError = profileChangeError {
