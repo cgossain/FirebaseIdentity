@@ -10,8 +10,8 @@ Pod::Spec.new do |s|
   s.author           = { 'cgossain' => 'cgossain@gmail.com' }
   s.source           = { :git => 'https://github.com/cgossain/FirebaseIdentity.git', :tag => s.version.to_s }
   s.swift_versions   = ['5.0']
-  s.static_framework = true
   s.ios.deployment_target = '11.4'
+  s.static_framework = true
   s.source_files = 'FirebaseIdentity/Classes/**/*'
   s.dependency 'Firebase/Core'
   s.dependency 'Firebase/Auth'
