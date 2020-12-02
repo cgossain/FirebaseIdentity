@@ -1,8 +1,8 @@
 {
   "name": "FirebaseIdentity",
-  "version": "0.2.0",
-  "summary": "A short description of FirebaseIdentity.",
-  "description": "TODO: Add long description of the pod here.",
+  "version": "0.5.0",
+  "summary": "A lightweight library that simplifies dealing with Firebase Authentication iOS SDK, written in Swift.",
+  "description": "Firebase Authentication is a powerful service that can be implemented in many different ways. This library aims to simplify working with features of Firebase Authentication by enforcing modern authentication workflows.",
   "homepage": "https://github.com/cgossain/FirebaseIdentity",
   "license": {
     "type": "MIT",
@@ -13,12 +13,15 @@
   },
   "source": {
     "git": "https://github.com/cgossain/FirebaseIdentity.git",
-    "tag": "0.2.0"
+    "tag": "0.5.0"
   },
-  "static_framework": true,
+  "swift_versions": [
+    "5.0"
+  ],
   "platforms": {
     "ios": "11.4"
   },
+  "static_framework": true,
   "source_files": "FirebaseIdentity/Classes/**/*",
   "dependencies": {
     "Firebase/Core": [
@@ -33,5 +36,6 @@
     "ProcedureKit": [
 
     ]
-  }
+  },
+  "swift_version": "5.0"
 }
