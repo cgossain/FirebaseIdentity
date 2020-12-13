@@ -23,7 +23,6 @@
 //
 
 import Foundation
-import FirebaseCore
 import FirebaseAuth
 
 public enum ProfileChangeError: Error {

@@ -23,7 +23,6 @@
 //
 
 import ProcedureKit
-import FirebaseCore
 import FirebaseAuth
 
 final class AuthOperation<P: IdentityProvider>: Procedure {
