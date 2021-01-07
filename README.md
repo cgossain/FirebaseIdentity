@@ -22,7 +22,7 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
     ...
     
     // firebase
-    FirebaseApp.configure()
+    <b>FirebaseApp.configure()</b>
 
     // facebook
     ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -58,11 +58,12 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 
 ### IdentityProvider
 
-Sign-in providers are modelled by the `IdentityProvider` class. 
+Sign-in providers are modelled by the `IdentityProvider` class.
 
 Currently only `EmailIdentityProvider` and `FacebookIdentityProvider` are implemented, but you could easily subclass `IdentityProvider` to implement any other provider. Feel free to submit a pull request if you implement other ones :)
 
 To sign up a new user using email authentication:
+
 ```
 let provider = EmailIdentityProvider(email: user.email, password: user.password)
 AuthManager.shared.signUp(with: provider) { (result) in
@@ -77,6 +78,7 @@ AuthManager.shared.signUp(with: provider) { (result) in
 ```
 
 To sign up/in a user with Facebook authentication:
+
 ```
 let requestedPermissions: [String] = ["email"]
 self.fbLoginManager.logIn(permissions: requestedPermissions, from: self) { (result, error) in
@@ -108,7 +110,7 @@ There are many other examples included in the sample application that you should
 
 There are some user profile changes in Firebase that require a recent login. In particular Firebase will trigger the `FIRAuthErrorCodeRequiresRecentLogin = 17014,` error in these situation.
 
-This library handles this error via the `AuthManagerReauthenticating` protocol. 
+This library handles this error via the `AuthManagerReauthenticating` protocol.
 
 However as an added bonus, this library also tracks the last user sign in time and will optimistically request reauthentication if more that 5 minutes have elapsed since the last sign in (5 minutes matches the currently documented Firebase recent sign in threshhold). The benifit of tracking this locally is that we can avoid an additional network request that we know will generate this error anyways.
 
@@ -121,14 +123,14 @@ extension AccountViewController: AuthManagerReauthenticating {
         guard let provider = providers.first else {
             return
         }
-        
+
         switch provider.providerID {
         case .email:
             // an email provider will always have an email associated with it, therefore it should be safe to force unwrap this value here;
             // what if there is some kind of error that causes the email to be non-existant in this scenario? Force the user to log-out, then back in?
             // it seems like it would be impossible for the email to not exist on an email auth provider
             let email = provider.email!
-            
+
             // present UI for user to provider their current password
             let alert = UIAlertController(title: "Confirm Password", message: "Your current password is required to change your email address.\n\nCurrent Email: \(email)\nTarget Email:\(challenge.context.profileChangeType.attemptedValue)", preferredStyle: .actionSheet)
             for password in Set(AuthManager.debugEmailProviderUsers.map({ $0.password })) {
@@ -142,7 +144,7 @@ extension AccountViewController: AuthManagerReauthenticating {
                     }
                 }))
             }
-            
+
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel, handler: nil))
             self.present(alert, animated: true, completion: nil)
         case .facebook:
