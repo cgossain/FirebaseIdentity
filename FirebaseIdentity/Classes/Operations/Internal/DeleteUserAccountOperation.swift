@@ -29,7 +29,7 @@ import FirebaseAuth
 /// An operation that delete the currently authenticated Firebase user.
 final class DeleteUserAccountOperation: Procedure {
     /// A block called when the operation completes but just before the operation moves to the `finished` state.
-    var deleteFirebaseUserCompletionBlock: ProfileChangeHandler?
+    var deleteFirebaseUserCompletionBlock: AuthManager.ProfileChangeHandler?
     
     
     // MARK: - Lifecycle

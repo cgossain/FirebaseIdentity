@@ -27,39 +27,28 @@ import FirebaseAuth
 import ProcedureKit
 
 
-/// The block that is invoked when an authentication related event completes. The parameter
-/// passed to the block is an `AuthManager.Result` object that may indicate that a
-/// further user action is required.
-public typealias AuthResultHandler = (Result<AuthDataResult, AuthenticationError>) -> Void
-
-/// The block that is invoked when a provider unlink event completes.
-public typealias AuthUnlinkHandler = (Result<User, Error>) -> Void
-
-/// The block that is invoked when a profile change event completes.
-public typealias ProfileChangeHandler = (Result<User, ProfileChangeError>) -> Void
-
-/// The block that is optionally invoked when the `reauthenticate()` method completes.
-public typealias ReauthenticationHandler = (AuthenticationError?) -> Void
-
-/// The block that is optionally invoked when the `requestReauthentication()` method completes.
-public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationStatus) -> Void
-
-/// A protocol for an object that is capable of reauthenticating an AuthManager.
-public protocol AuthManagerReauthenticating: class {
-    /// Called when an action triggers the `requiresRecentLogin` from Firebase.
-    ///
-    /// - parameters:
-    ///     - manager: The auth manager instance that is requesting reauthentication.
-    ///     - providers: An array of available/linked providers that should be used for reauthentication. These can either be presented as options to a user, or the
-    ///                  first item in the list can automatically be used for reauthentication. The providers are pre-sorted according to the priority order specified in
-    ///                  the `providerReauthenticationPriority` property of the AuthManager.
-    ///     - challenge: An object that must be passed to the auth manager's `reauthenticate` method. This is required to continue/retry the action that triggered the `requiresRecentLogin` error.
-    func authManager(_ manager: AuthManager, reauthenticateUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
-}
-
 extension AuthManager {
     /// Posted on the main queue when the authentication state changes.
     public static let authenticationStateChangedNotification = Notification.Name("com.firebaseidentity.authmanager.authenticationstatechangednotification")
+}
+
+extension AuthManager {
+    /// The block that is invoked when an authentication related event completes. The parameter
+    /// passed to the block is an `AuthManager.Result` object that may indicate that a
+    /// further user action is required.
+    public typealias AuthResultHandler = (Result<AuthDataResult, AuthenticationError>) -> Void
+
+    /// The block that is invoked when a provider unlink event completes.
+    public typealias AuthUnlinkHandler = (Result<User, Error>) -> Void
+
+    /// The block that is invoked when a profile change event completes.
+    public typealias ProfileChangeHandler = (Result<User, ProfileChangeError>) -> Void
+
+    /// The block that is optionally invoked when the `reauthenticate()` method completes.
+    public typealias ReauthenticationHandler = (AuthenticationError?) -> Void
+
+    /// The block that is optionally invoked when the `requestReauthentication()` method completes.
+    public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationStatus) -> Void
 }
 
 /// An object that manages all Firebase authentication and user related events.
@@ -79,7 +68,7 @@ public class AuthManager {
     /// The shared instance.
     public static let shared = AuthManager()
     
-    /// The object that will be used to handle reauthentication.
+    /// The object that will handle reauthentication callbacks.
     public weak var reauthenticator: AuthManagerReauthenticating?
     
     /// The authentication state of the receiver.
@@ -117,7 +106,6 @@ public class AuthManager {
         }
     }
     
-    
     /// The last authentication date of the currently signed in user (includes sign-ins and reauthentications).
     public var lastAuthenticationDate: Date? {
         var dates: [Date] = []
@@ -133,7 +121,6 @@ public class AuthManager {
         let descending = dates.sorted(by: >)
         return descending.first
     }
-    
     
     /// The order of priority that identity providers should be used for reauthentication when available.
     ///

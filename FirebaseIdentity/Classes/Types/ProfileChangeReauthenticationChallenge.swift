@@ -36,7 +36,7 @@ public struct ProfileChangeReauthenticationChallenge {
     
     // MARK: - Internal Properties
     /// Interal use completion handler.
-    let completion: ProfileChangeHandler
+    let completion: AuthManager.ProfileChangeHandler
 }
 
 extension ProfileChangeReauthenticationChallenge: Equatable, Hashable {

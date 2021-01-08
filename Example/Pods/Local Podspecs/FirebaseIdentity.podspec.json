@@ -1,6 +1,6 @@
 {
   "name": "FirebaseIdentity",
-  "version": "0.5.0",
+  "version": "1.1.0",
   "summary": "A lightweight library that simplifies dealing with Firebase Authentication iOS SDK, written in Swift.",
   "description": "Firebase Authentication is a powerful service that can be implemented in many different ways. This library aims to simplify working with features of Firebase Authentication by enforcing modern authentication workflows.",
   "homepage": "https://github.com/cgossain/FirebaseIdentity",
@@ -13,16 +13,19 @@
   },
   "source": {
     "git": "https://github.com/cgossain/FirebaseIdentity.git",
-    "tag": "0.5.0"
+    "tag": "1.1.0"
   },
-  "swift_versions": [
-    "5.0"
-  ],
-  "platforms": {
-    "ios": "11.4"
-  },
+  "swift_versions": "5.0",
   "static_framework": true,
+  "platforms": {
+    "ios": "12.4"
+  },
   "source_files": "FirebaseIdentity/Classes/**/*",
+  "resource_bundles": {
+    "FirebaseIdentity-Assets": [
+      "MooveFitCoreKit/Assets/**/*"
+    ]
+  },
   "dependencies": {
     "Firebase/Core": [
 
