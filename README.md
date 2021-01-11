@@ -7,7 +7,15 @@
 
 ## Introduction
 
-The primary goal of the FirebaseIdentity library is to streamline the handling of all the Firebase errors that may come up during the various user authentication lifecycle flows (i.e. sign up, sign in, account linking, account unlinking, email update, password update, reauthentication, account deletion, etc.) and to even provide automatic retry functionality in some cases. This is done by abstracting away a lot of the error handling logic into a singleton state machine ('AuthManager') cabable of handling most Firebase authentication use cases.
+Firebase Authentication is a powerful service that handles the complexities of authentication on our
+behalf.
+
+The purpose of this library is to make building custom frontend UI around the Firebase Authentication
+service easier on iOS for those of us that do not want to use the FirebaseUI library. It does this by implementing
+standard authentication workflows and error handling (i.e. account linking, profile updates, set/update password, reauthentication,
+enabling/disabling thrid-party providers, account deletion, auto-retry, etc.). This is done by abstracting away
+a lot of the error handling logic into a singleton state machine ('AuthManager') cabable of handling most Firebase
+authentication use cases.
 
 ## Usage
 
