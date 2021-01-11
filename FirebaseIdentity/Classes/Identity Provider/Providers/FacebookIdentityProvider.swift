@@ -25,15 +25,22 @@
 import Foundation
 import FirebaseAuth
 
-public final class FaceboookIdentityProvider: IdentityProvider {    
-    public let providerID: IdentityProviderID
+public final class FaceboookIdentityProvider: IdentityProvider {
+    /// The facebook access token.
     public let accessToken: String
     
+    /// The identity provider ID.
+    public let providerID: IdentityProviderID
+    
+    
+    // MARK: - Lifecycle
     public init(accessToken: String) {
         self.providerID = .facebook
         self.accessToken = accessToken
     }
     
+    
+    // MARK: - IdentityProvider
     public func signUp(completion: @escaping AuthDataResultCallback) {
         let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
         Auth.auth().signIn(with: credential, completion: completion)
@@ -45,22 +52,22 @@ public final class FaceboookIdentityProvider: IdentityProvider {
     }
     
     public func reauthenticate(completion: @escaping AuthDataResultCallback) {
-        if let currentUser = Auth.auth().currentUser {
-            let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-            currentUser.reauthenticate(with: credential, completion: completion)
-        }
-        else {
+        guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
+            return
         }
+        
+        let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
+        currentUser.reauthenticate(with: credential, completion: completion)
     }
     
     public func link(completion: @escaping AuthDataResultCallback) {
-        if let currentUser = Auth.auth().currentUser {
-            let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-            currentUser.link(with: credential, completion: completion)
-        }
-        else {
+        guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
+            return
         }
+        
+        let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
+        currentUser.link(with: credential, completion: completion)
     }
 }

@@ -26,7 +26,6 @@ import Foundation
 import FirebaseAuth
 import ProcedureKit
 
-
 extension AuthManager {
     /// Posted on the main queue when the authentication state changes.
     public static let authenticationStateChangedNotification = Notification.Name("com.firebaseidentity.authmanager.authenticationstatechangednotification")
@@ -94,17 +93,18 @@ public class AuthManager {
         // sort according to the priority order
         // https://stackoverflow.com/a/51683055/485352
         return providers.sorted {
-            guard let first = providerReauthenticationPriority.firstIndex(of: $0.providerID) else {
-                return false
-            }
-
-            guard let second = providerReauthenticationPriority.firstIndex(of: $1.providerID) else {
-                return true
-            }
-
-            return first < second
+            guard let lhs = linkedProviderPriority.firstIndex(of: $0.providerID) else { return false }
+            guard let rhs = linkedProviderPriority.firstIndex(of: $1.providerID) else { return true }
+            return lhs < rhs
         }
     }
+    
+    /// The order of priority that identity providers should listed in the `linkedProviders` array.
+    ///
+    /// This array is used for things like reauthentication when needed.
+    ///
+    /// - Note: Defaults to `email` as the first provider.
+    public var linkedProviderPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
     /// The last authentication date of the currently signed in user (includes sign-ins and reauthentications).
     public var lastAuthenticationDate: Date? {
@@ -121,11 +121,6 @@ public class AuthManager {
         let descending = dates.sorted(by: >)
         return descending.first
     }
-    
-    /// The order of priority that identity providers should be used for reauthentication when available.
-    ///
-    /// Defaults to `[.email, .facebook]`.
-    public var providerReauthenticationPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
     
     // MARK: - Private Properties
@@ -196,6 +191,7 @@ public class AuthManager {
 }
 
 extension AuthManager {
+    /// Enqueues a sign up operation.
     public func signUp<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
         authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .signUp) { (result, error) in
             guard let error = error else {
@@ -208,6 +204,7 @@ extension AuthManager {
         })
     }
     
+    /// Enqueues a sign in operation.
     public func signIn<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
         authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .signIn) { (result, error) in
             guard let error = error else {
@@ -220,6 +217,7 @@ extension AuthManager {
         })
     }
     
+    /// Enqueues a account linking operation.
     public func linkWith<P: IdentityProvider>(with provider: P, completion: @escaping AuthResultHandler) {
         authenticationQueue.addOperation(AuthOperation(provider: provider, authenticationType: .linkProvider) { (result, error) in
             guard let error = error else {
@@ -232,6 +230,7 @@ extension AuthManager {
         })
     }
     
+    /// Enqueues a reauthentication operation.
     public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, completion: ReauthenticationHandler? = nil) {
         self.reauthenticate(with: provider) { (result) in
             switch result {
@@ -266,10 +265,12 @@ extension AuthManager {
         }
     }
     
+    /// Cancels reauthenticatoin.
     public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
         challenge.completion(.failure(.cancelledByUser(challenge.context)))
     }
     
+    /// Requests a reauthentication to begin.
     public func requestReauthentication(passwordForReauthentication: String? = nil, completion: @escaping ReauthenticationRequestHandler) {
         guard let authenticatedUser = authenticatedUser else {
             return
@@ -318,6 +319,7 @@ extension AuthManager {
 }
 
 extension AuthManager {
+    /// Updates the display name of the currently signed in user.
     public func updateDisplayName(to newDisplayName: String, passwordForReauthentication: String? = nil, completion: @escaping ProfileChangeHandler) {
         guard let authenticatedUser = authenticatedUser else {
             return
@@ -339,7 +341,7 @@ extension AuthManager {
         }
     }
     
-    /// Updates the email address for the user.
+    /// Updates the email address of the currently signed in user.
     ///
     /// - parameters:
     ///     - newEmail: The new email address for the user.
@@ -363,7 +365,7 @@ extension AuthManager {
         }
     }
     
-    /// Updates (or sets) the password for the user.
+    /// Updates (or sets) the password of the currently signed in user.
     ///
     /// - parameters:
     ///     - newPassword: The new password for the user.
@@ -387,6 +389,7 @@ extension AuthManager {
         }
     }
     
+    /// Unlinks the specified provider from the currently signed in user.
     public func unlinkFrom(providerID: IdentityProviderID, completion: @escaping ProfileChangeHandler) {
         guard let authenticatedUser = authenticatedUser else {
             return
@@ -413,6 +416,7 @@ extension AuthManager {
         }
     }
     
+    /// Enqueues a delete account operation.
     public func deleteAccount(with op: DeleteAccountOperation) {
         // raise flag
         accountDeletionQueue.addOperation { self.isDeletingUserAccount = true }
@@ -476,9 +480,9 @@ extension AuthManager {
     private func handleAuthProcedureFirebaseError<P: IdentityProvider>(_ error: Error, context: AuthenticationError.Context, provider: P, completion: @escaping AuthResultHandler) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.emailAlreadyInUse.rawValue, provider.providerID == .email {
-                // this error is only ever is specifically triggered when using the "createUserWithEmail" method
-                // in Firebase; in other words, this error is only triggered when the user tries to sign up for
-                // an email account
+                // this error is only ever triggered when using the "createUserWithEmail" method
+                // in Firebase; in other words, this error is only triggered when the user tries
+                // to sign up for an email account
                 let email = (provider as! EmailIdentityProvider).email
                 Auth.auth().fetchSignInMethods(forEmail: email) { (providers, fetchError) in
                     // note that unless the email address passed to this method, we don't expect

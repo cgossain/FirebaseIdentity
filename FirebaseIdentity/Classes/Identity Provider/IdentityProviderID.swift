@@ -27,11 +27,14 @@ import FirebaseAuth
 
 extension IdentityProviderID: CaseIterable {
     public static var allCases: [IdentityProviderID] {
-        return [.email, .facebook]
+        return [.email, .signInWithApple, .facebook]
     }
     
     /// The Firebase provider ID for email authentication.
     public static let email = IdentityProviderID(rawValue: FirebaseAuth.EmailAuthProviderID)!
+    
+    /// The Firebase provider ID for Sign in with Apple authentication.
+    public static let signInWithApple = IdentityProviderID(rawValue: SignInWithAppleAuthProviderID)!
     
     /// The Firebase provider ID for Facebook authentication.
     public static let facebook = IdentityProviderID(rawValue: FirebaseAuth.FacebookAuthProviderID)!
@@ -42,6 +45,9 @@ public struct IdentityProviderID: RawRepresentable {
     public init?(rawValue: String) {
         if rawValue == FirebaseAuth.EmailAuthProviderID {
             self.rawValue = FirebaseAuth.EmailAuthProviderID
+        }
+        else if rawValue == SignInWithAppleAuthProviderID {
+            self.rawValue = SignInWithAppleAuthProviderID
         }
         else if rawValue == FirebaseAuth.FacebookAuthProviderID {
             self.rawValue = FirebaseAuth.FacebookAuthProviderID
@@ -60,6 +66,8 @@ extension IdentityProviderID: CustomStringConvertible {
         switch self {
         case .email:
             return LocalizedString("Email", comment: "identity provider name")
+        case .signInWithApple:
+            return LocalizedString("Sign in with Apple", comment: "identity provider name")
         case .facebook:
             return LocalizedString("Facebook", comment: "identity provider name")
         default:

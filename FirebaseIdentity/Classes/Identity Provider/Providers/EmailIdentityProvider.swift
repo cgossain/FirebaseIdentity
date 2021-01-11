@@ -26,16 +26,25 @@ import Foundation
 import FirebaseAuth
 
 public final class EmailIdentityProvider: IdentityProvider {
-    public let providerID: IdentityProviderID
+    /// The email address.
     public let email: String
+    
+    /// The password.
     public let password: String
     
+    /// The identity provider ID.
+    public let providerID: IdentityProviderID
+    
+    
+    // MARK: - Lifecycle
     public init(email: String, password: String) {
-        self.providerID = .email
         self.email = email
         self.password = password
+        self.providerID = .email
     }
     
+    
+    // MARK: - IdentityProvider
     public func signUp(completion: @escaping AuthDataResultCallback) {
         Auth.auth().createUser(withEmail: email, password: password, completion: completion)
     }
@@ -46,22 +55,22 @@ public final class EmailIdentityProvider: IdentityProvider {
     }
     
     public func reauthenticate(completion: @escaping AuthDataResultCallback) {
-        if let currentUser = Auth.auth().currentUser {
-            let credential = EmailAuthProvider.credential(withEmail: email, password: password)
-            currentUser.reauthenticate(with: credential, completion: completion)
-        }
-        else {
+        guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
+            return
         }
+        
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        currentUser.reauthenticate(with: credential, completion: completion)
     }
     
     public func link(completion: @escaping AuthDataResultCallback) {
-        if let currentUser = Auth.auth().currentUser {
-            let credential = EmailAuthProvider.credential(withEmail: email, password: password)
-            currentUser.link(with: credential, completion: completion)
-        }
-        else {
+        guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
+            return
         }
+        
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        currentUser.link(with: credential, completion: completion)
     }
 }

@@ -24,6 +24,12 @@
 
 import Foundation
 
+// MARK: - Identity Providers
+/// A string constant identifying the Sign in with Apple identity provider within the FirebaseAuth library.
+///
+/// - Note: This constant is not defined in the FirebaseAuth library so we're defining it here.
+public let SignInWithAppleAuthProviderID = "apple.com"
+
 
 // MARK: - Bundle
 extension Bundle {
