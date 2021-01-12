@@ -22,9 +22,9 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '12.4'
   
   s.source_files = 'FirebaseIdentity/Classes/**/*'
-  s.resource_bundles = {
-      'FirebaseIdentity-Assets' => ['MooveFitCoreKit/Assets/**/*']
-  }
+  # s.resource_bundles = {
+  #     'FirebaseIdentity-Assets' => ['MooveFitCoreKit/Assets/**/*']
+  # }
   
   s.dependency 'Firebase/Core'
   s.dependency 'Firebase/Auth'
