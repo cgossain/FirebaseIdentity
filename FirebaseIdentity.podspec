@@ -3,9 +3,6 @@ Pod::Spec.new do |s|
   s.version          = '1.1.0'
   s.summary          = 'A lightweight library that streamlines interacting with the Firebase/Auth library on iOS, written in Swift.'
   s.description      = <<-DESC
-  Firebase Authentication is a powerful service that handles the complexities of authentication on our
-  behalf. 
-  
   The purpose of this library is to make building custom frontend UI around the Firebase Authentication
   service easier on iOS for those of us that do not want to use the FirebaseUI library. It does this by implementing
   standard authentication workflows and error handling (i.e. account linking, profile updates, set/update password, reauthentication,
