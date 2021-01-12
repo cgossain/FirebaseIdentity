@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   s.swift_version    = '5.0'
   s.static_framework = true
   s.ios.deployment_target = '12.4'
-  
+
   s.source_files = 'FirebaseIdentity/Classes/**/*'
   # s.resource_bundles = {
   #     'FirebaseIdentity-Assets' => ['MooveFitCoreKit/Assets/**/*']
@@ -27,4 +27,9 @@ Pod::Spec.new do |s|
   s.dependency 'Firebase/Auth'
   s.dependency 'Firebase/Database'
   s.dependency 'ProcedureKit'
+
+  # Exclude `arm64` architecture for the simulator
+  # https://github.com/CocoaPods/CocoaPods/issues/10065#issuecomment-694266259
+  s.pod_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
+  s.user_target_xcconfig = { 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'arm64' }
 end
