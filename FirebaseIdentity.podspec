@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'FirebaseIdentity'
-  s.version          = '1.1.0'
+  s.version          = '1.1.1'
   s.summary          = 'A lightweight library that streamlines interacting with the Firebase/Auth library on iOS, written in Swift.'
   s.description      = <<-DESC
   The purpose of this library is to make building custom frontend UI around the Firebase Authentication
