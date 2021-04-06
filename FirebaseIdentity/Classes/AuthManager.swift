@@ -316,6 +316,11 @@ extension AuthManager {
             completion(.failure(.missingReauthenticationMethod(context)))
         }
     }
+    
+    /// Signs out the current user.
+    public func signOut() {
+        try? Auth.auth().signOut()
+    }
 }
 
 extension AuthManager {
