@@ -28,6 +28,7 @@
 #import "FBSDKEventDeactivationManager.h"
 #import "FBSDKFeatureManager.h"
 #import "FBSDKGateKeeperManager.h"
+#import "FBSDKGraphRequestFactory.h"
 #import "FBSDKInstrumentManager.h"
 #import "FBSDKInternalUtility.h"
 #import "FBSDKLogger.h"
@@ -54,7 +55,6 @@ NSString *const FBSDKApplicationDidBecomeActiveNotification = @"com.facebook.sdk
 
 static NSString *const FBSDKAppLinkInboundEvent = @"fb_al_inbound";
 static NSString *const FBSDKKitsBitmaskKey = @"com.facebook.sdk.kits.bitmask";
-static NSString *const FBSDKAutoInitLaunchArgument = @"_calledFromAutoInitSDK";
 static BOOL g_isSDKInitialized = NO;
 static UIApplicationState _applicationState;
 
@@ -66,31 +66,6 @@ static UIApplicationState _applicationState;
 
 #pragma mark - Class Methods
 
-+ (void)load
-{
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  if ([FBSDKSettings isAutoInitEnabled]) {
-    #pragma clang diagnostic pop
-    // when the app becomes active by any means,  kick off the initialization.
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(initializeWithLaunchData:)
-                                                 name:UIApplicationDidFinishLaunchingNotification
-                                               object:nil];
-  }
-}
-
-// Initialize SDK listeners
-// Don't call this function in any place else. It should only be called when the class is loaded.
-+ (void)initializeWithLaunchData:(NSNotification *)note
-{
-  [self initializeSDK:note.userInfo];
-  // Remove the observer
-  [[NSNotificationCenter defaultCenter] removeObserver:self
-                                                  name:UIApplicationDidFinishLaunchingNotification
-                                                object:nil];
-}
-
 + (void)initializeSDK:(NSDictionary<UIApplicationLaunchOptionsKey, id> *)launchOptions
 {
   if (g_isSDKInitialized) {
@@ -98,7 +73,7 @@ static UIApplicationState _applicationState;
     return;
   }
 
-  g_isSDKInitialized = YES;
+  [self setIsSdkInitialized];
 
   FBSDKApplicationDelegate *delegate = [self sharedInstance];
   [FBSDKSettings recordInstall];
@@ -110,9 +85,7 @@ static UIApplicationState _applicationState;
 
   [[FBSDKAppEvents singleton] registerNotifications];
 
-  NSMutableDictionary *modifiedLaunchOptions = [NSMutableDictionary dictionaryWithDictionary:launchOptions];
-  [FBSDKTypeUtility dictionary:modifiedLaunchOptions setObject:@YES forKey:FBSDKAutoInitLaunchArgument];
-  [delegate application:[UIApplication sharedApplication] didFinishLaunchingWithOptions:modifiedLaunchOptions];
+  [delegate application:[UIApplication sharedApplication] didFinishLaunchingWithOptions:launchOptions];
 
   // In case of sdk autoInit enabled sdk expects one appDidBecomeActive notification after app launch and has some logic to ignore it.
   // if sdk autoInit disabled app won't receive appDidBecomeActive on app launch and will ignore the first one it gets instead of handling it.
@@ -124,14 +97,6 @@ static UIApplicationState _applicationState;
   [FBSDKFeatureManager checkFeature:FBSDKFeatureInstrument completionBlock:^(BOOL enabled) {
     if (enabled) {
       [FBSDKInstrumentManager enable];
-    }
-  }];
-
-  [FBSDKFeatureManager checkFeature:FBSDKFeatureMonitoring completionBlock:^(BOOL enabled) {
-    if (enabled && FBSDKSettings.isAutoLogAppEventsEnabled) {
-    #ifndef DEBUG
-      [FBSDKMonitor enable];
-    #endif
     }
   }];
 
@@ -227,28 +192,20 @@ static UIApplicationState _applicationState;
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  if ([[FBSDKTypeUtility dictionary:launchOptions objectForKey:FBSDKAutoInitLaunchArgument ofType:NSNumber.class] boolValue]) {
-    // Clean the flag out of launch options
-    NSMutableDictionary *originalLaunchOptions = [NSMutableDictionary dictionaryWithDictionary:launchOptions];
-    [originalLaunchOptions removeObjectForKey:FBSDKAutoInitLaunchArgument];
-    launchOptions = [originalLaunchOptions copy];
-  } else {
-    // Log because it was not called by autoInit
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [FBSDKAppEvents logInternalEvent:FBSDKAppEventNameImplementsApplicationDidFinishLaunching
-                          parameters:@{}
-                  isImplicitlyLogged:YES];
-    #pragma clang diagnostic pop
-  }
-
   if (_isAppLaunched) {
     return NO;
   }
 
+  if (!g_isSDKInitialized) {
+    [FBSDKApplicationDelegate initializeSDK:launchOptions];
+  }
+
   _isAppLaunched = YES;
-  FBSDKAccessToken *cachedToken = [FBSDKSettings accessTokenCache].accessToken;
+
+  // Retrieve cached tokens
+  FBSDKAccessToken *cachedToken = FBSDKSettings.tokenCache.accessToken;
   [FBSDKAccessToken setCurrentAccessToken:cachedToken];
+
   // fetch app settings
   [FBSDKServerConfigurationManager loadServerConfigurationWithCompletionBlock:NULL];
 
@@ -258,6 +215,10 @@ static UIApplicationState _applicationState;
 #if !TARGET_OS_TV
   FBSDKProfile *cachedProfile = [FBSDKProfile fetchCachedProfile];
   [FBSDKProfile setCurrentProfile:cachedProfile];
+
+  FBSDKAuthenticationToken *cachedAuthToken = FBSDKSettings.tokenCache.authenticationToken;
+  [FBSDKAuthenticationToken setCurrentAuthenticationToken:cachedAuthToken];
+  [FBSDKAuthenticationStatusUtility checkAuthenticationStatus];
 #endif
   NSArray<id<FBSDKApplicationObserving>> *observers = [_applicationObservers allObjects];
   BOOL handled = NO;
@@ -274,7 +235,7 @@ static UIApplicationState _applicationState;
 
 - (void)applicationDidEnterBackground:(NSNotification *)notification
 {
-  _applicationState = UIApplicationStateBackground;
+  [self setApplicationState:UIApplicationStateBackground];
   NSArray<id<FBSDKApplicationObserving>> *observers = [_applicationObservers allObjects];
   for (id<FBSDKApplicationObserving> observer in observers) {
     if ([observer respondsToSelector:@selector(applicationDidEnterBackground:)]) {
@@ -285,7 +246,7 @@ static UIApplicationState _applicationState;
 
 - (void)applicationDidBecomeActive:(NSNotification *)notification
 {
-  _applicationState = UIApplicationStateActive;
+  [self setApplicationState:UIApplicationStateActive];
   // Auto log basic events in case autoLogAppEventsEnabled is set
   if (FBSDKSettings.isAutoLogAppEventsEnabled) {
     [FBSDKAppEvents activateApp];
@@ -304,7 +265,7 @@ static UIApplicationState _applicationState;
 
 - (void)applicationWillResignActive:(NSNotification *)notification
 {
-  _applicationState = UIApplicationStateInactive;
+  [self setApplicationState:UIApplicationStateInactive];
   NSArray<id<FBSDKApplicationObserving>> *const observers = [_applicationObservers copy];
   for (id<FBSDKApplicationObserving> observer in observers) {
     if ([observer respondsToSelector:@selector(applicationWillResignActive:)]) {
@@ -334,6 +295,12 @@ static UIApplicationState _applicationState;
 + (UIApplicationState)applicationState
 {
   return _applicationState;
+}
+
+- (void)setApplicationState:(UIApplicationState)state
+{
+  _applicationState = state;
+  [FBSDKAppEvents setApplicationState:state];
 }
 
 #pragma mark - Helper Methods
@@ -465,15 +432,26 @@ static UIApplicationState _applicationState;
 
 + (BOOL)isSDKInitialized
 {
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  return [FBSDKSettings isAutoInitEnabled] || g_isSDKInitialized;
-  #pragma clang diagnostic pop
+  return g_isSDKInitialized;
+}
+
++ (void)setIsSdkInitialized
+{
+  g_isSDKInitialized = YES;
+  [FBSDKGraphRequestConnection setCanMakeRequests];
+  [FBSDKAppEvents setCanLogEvents];
+  [FBSDKGateKeeperManager configureWithSettings:FBSDKSettings.class
+                                requestProvider:[FBSDKGraphRequestFactory new]];
 }
 
 // MARK: - Testability
 
 #if DEBUG
+
++ (void)resetIsSdkInitialized
+{
+  g_isSDKInitialized = NO;
+}
 
 - (BOOL)isAppLaunched
 {

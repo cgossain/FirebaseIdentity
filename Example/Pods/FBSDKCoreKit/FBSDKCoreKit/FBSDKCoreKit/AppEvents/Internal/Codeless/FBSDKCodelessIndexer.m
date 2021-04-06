@@ -51,15 +51,19 @@ static NSString *_lastTreeHash;
   if (_isGestureSet) {
     return;
   }
-#if TARGET_OS_SIMULATOR
-  [self setupGesture];
-#else
-  [self loadCodelessSettingWithCompletionBlock:^(BOOL isCodelessSetupEnabled, NSError *error) {
-    if (isCodelessSetupEnabled) {
-      [self setupGesture];
-    }
-  }];
-#endif
+
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+  #if TARGET_OS_SIMULATOR
+    [self setupGesture];
+  #else
+    [self loadCodelessSettingWithCompletionBlock:^(BOOL isCodelessSetupEnabled, NSError *error) {
+      if (isCodelessSetupEnabled) {
+        [self setupGesture];
+      }
+    }];
+  #endif
+  });
 }
 
  #pragma clang diagnostic push
@@ -214,7 +218,7 @@ static NSString *_lastTreeHash;
   NSString *advertiserID = [FBSDKAppEventsUtility advertiserID] ?: @"";
   machine = machine ?: @"";
   NSString *debugStatus = [FBSDKAppEventsUtility isDebugBuild] ? @"1" : @"0";
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
   NSString *isSimulator = @"1";
 #else
   NSString *isSimulator = @"0";

@@ -20,13 +20,13 @@
 
 #import <AdSupport/AdSupport.h>
 
-#import "FBSDKAccessTokenCache.h"
 #import "FBSDKAccessTokenExpirer.h"
 #import "FBSDKAppEvents+Internal.h"
 #import "FBSDKAppEventsConfiguration.h"
 #import "FBSDKAppEventsConfigurationManager.h"
 #import "FBSDKCoreKit.h"
 #import "FBSDKInternalUtility.h"
+#import "FBSDKTokenCache.h"
 
 #define FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(TYPE, PLIST_KEY, GETTER, SETTER, DEFAULT_VALUE, ENABLE_CACHE) \
   static TYPE *g_ ## PLIST_KEY = nil; \
@@ -63,7 +63,7 @@ FBSDKLoggingBehavior FBSDKLoggingBehaviorGraphAPIDebugWarning = @"graph_api_debu
 FBSDKLoggingBehavior FBSDKLoggingBehaviorGraphAPIDebugInfo = @"graph_api_debug_info";
 FBSDKLoggingBehavior FBSDKLoggingBehaviorNetworkRequests = @"network_requests";
 
-static NSObject<FBSDKAccessTokenCaching> *g_tokenCache;
+static NSObject<FBSDKTokenCaching> *g_tokenCache;
 static NSMutableSet<FBSDKLoggingBehavior> *g_loggingBehaviors;
 static NSString *const FBSDKSettingsLimitEventAndDataUsage = @"com.facebook.sdk:FBSDKSettingsLimitEventAndDataUsage";
 static NSString *const FBSDKSettingsBitmask = @"com.facebook.sdk:FBSDKSettingsBitmask";
@@ -99,7 +99,7 @@ static NSString *const advertiserIDCollectionEnabledFalseWarning =
 + (void)initialize
 {
   if (self == [FBSDKSettings class]) {
-    g_tokenCache = [[FBSDKAccessTokenCache alloc] init];
+    g_tokenCache = [FBSDKTokenCache new];
     g_accessTokenExpirer = [[FBSDKAccessTokenExpirer alloc] init];
 
     [FBSDKSettings _logWarnings];
@@ -115,10 +115,10 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSString, FacebookClientToken, cl
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSString, FacebookDisplayName, displayName, setDisplayName, nil, NO);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSString, FacebookDomainPart, facebookDomainPart, setFacebookDomainPart, nil, NO);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookJpegCompressionQuality, _JPEGCompressionQualityNumber, _setJPEGCompressionQualityNumber, @0.9, NO);
-FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookAutoInitEnabled, _autoInitEnabled, _setAutoInitEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookInstrumentEnabled, _instrumentEnabled, _setInstrumentEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookAutoLogAppEventsEnabled, _autoLogAppEventsEnabled, _setAutoLogAppEventsEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookAdvertiserIDCollectionEnabled, _advertiserIDCollectionEnabled, _setAdvertiserIDCollectionEnabled, @1, YES);
+FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(NSNumber, FacebookSKAdNetworkReportEnabled, _SKAdNetworkReportEnabled, _setSKAdNetworkReportEnabled, @1, YES);
 FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
   NSNumber,
   FacebookCodelessDebugLogEnabled,
@@ -146,19 +146,6 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
 + (void)setJPEGCompressionQuality:(CGFloat)JPEGCompressionQuality
 {
   [self _setJPEGCompressionQualityNumber:@(JPEGCompressionQuality)];
-}
-
-+ (BOOL)isAutoInitEnabled
-{
-  return [self _autoInitEnabled].boolValue;
-}
-
-+ (void)setAutoInitEnabled:(BOOL)autoInitEnabled
-{
-  [self _setAutoInitEnabled:@(autoInitEnabled)];
-  if (autoInitEnabled) {
-    [FBSDKApplicationDelegate initializeSDK:nil];
-  }
 }
 
 + (BOOL)isInstrumentEnabled
@@ -221,7 +208,10 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
 {
   if (@available(iOS 14.0, *)) {
     if (g_advertiserTrackingStatus == nil) {
-      g_advertiserTrackingStatus = [[NSUserDefaults standardUserDefaults] objectForKey:FBSDKSettingsAdvertisingTrackingStatus] ?: @([FBSDKAppEventsConfigurationManager cachedAppEventsConfiguration].defaultATEStatus);
+      g_advertiserTrackingStatus = [[NSUserDefaults standardUserDefaults] objectForKey:FBSDKSettingsAdvertisingTrackingStatus];
+      if (g_advertiserTrackingStatus == nil) {
+        return [FBSDKAppEventsConfigurationManager cachedAppEventsConfiguration].defaultATEStatus;
+      }
     }
     return g_advertiserTrackingStatus.unsignedIntegerValue;
   } else {
@@ -234,6 +224,16 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
 {
   g_advertiserTrackingStatus = @(status);
   [[NSUserDefaults standardUserDefaults] setObject:g_advertiserTrackingStatus forKey:FBSDKSettingsAdvertisingTrackingStatus];
+}
+
++ (BOOL)isSKAdNetworkReportEnabled
+{
+  return [self _SKAdNetworkReportEnabled].boolValue;
+}
+
++ (void)setSKAdNetworkReportEnabled:(BOOL)SKAdNetworkReportEnabled
+{
+  [self _setSKAdNetworkReportEnabled:@(SKAdNetworkReportEnabled)];
 }
 
 + (BOOL)shouldLimitEventAndDataUsage
@@ -329,12 +329,12 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
 
 #pragma mark - Internal
 
-+ (NSObject<FBSDKAccessTokenCaching> *)accessTokenCache
++ (NSObject<FBSDKTokenCaching> *)tokenCache
 {
   return g_tokenCache;
 }
 
-+ (void)setAccessTokenCache:(NSObject<FBSDKAccessTokenCaching> *)cache
++ (void)setTokenCache:(NSObject<FBSDKTokenCaching> *)cache
 {
   if (g_tokenCache != cache) {
     g_tokenCache = cache;
@@ -435,11 +435,8 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
 + (void)_logIfSDKSettingsChanged
 {
   NSInteger bitmask = 0;
-  NSInteger bit = 0;
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  bitmask |= ([FBSDKSettings isAutoInitEnabled] ? 1 : 0) << bit++;
-  #pragma clang diagnostic pop
+  // Starting at 1 to maintain the meaning of the bits since the autoInit flag was removed.
+  NSInteger bit = 1;
   bitmask |= ([FBSDKSettings isAutoLogAppEventsEnabled] ? 1 : 0) << bit++;
   bitmask |= ([FBSDKSettings isAdvertiserIDCollectionEnabled] ? 1 : 0) << bit++;
 
@@ -447,10 +444,9 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
   if (previousBitmask != bitmask) {
     [[NSUserDefaults standardUserDefaults] setInteger:bitmask forKey:FBSDKSettingsBitmask];
 
-    NSArray<NSString *> *keys = @[@"FacebookAutoInitEnabled",
-                                  @"FacebookAutoLogAppEventsEnabled",
+    NSArray<NSString *> *keys = @[@"FacebookAutoLogAppEventsEnabled",
                                   @"FacebookAdvertiserIDCollectionEnabled"];
-    NSArray<NSNumber *> *defaultValues = @[@YES, @YES, @YES];
+    NSArray<NSNumber *> *defaultValues = @[@YES, @YES];
     NSInteger initialBitmask = 0;
     NSInteger usageBitmask = 0;
     for (int i = 0; i < keys.count; i++) {
@@ -576,11 +572,6 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
   g_FacebookJpegCompressionQuality = nil;
 }
 
-+ (void)resetFacebookAutoInitEnabledCache
-{
-  g_FacebookAutoInitEnabled = nil;
-}
-
 + (void)resetFacebookInstrumentEnabledCache
 {
   g_FacebookInstrumentEnabled = nil;
@@ -599,6 +590,11 @@ FBSDKSETTINGS_PLIST_CONFIGURATION_SETTING_IMPL(
 + (void)resetAdvertiserTrackingStatusCache
 {
   g_advertiserTrackingStatus = nil;
+}
+
++ (void)resetFacebookSKAdNetworkReportEnabledCache
+{
+  g_FacebookSKAdNetworkReportEnabled = nil;
 }
 
 + (void)resetUserAgentSuffixCache
