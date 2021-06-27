@@ -35,4 +35,46 @@
                                                 flags:flags];
 }
 
+- (nonnull id<FBSDKGraphRequest>)createGraphRequestWithGraphPath:(nonnull NSString *)graphPath
+{
+  return [[FBSDKGraphRequest alloc] initWithGraphPath:graphPath];
+}
+
+- (nonnull id<FBSDKGraphRequest>)createGraphRequestWithGraphPath:(nonnull NSString *)graphPath
+                                                      parameters:(nonnull NSDictionary<NSString *, id> *)parameters
+{
+  return [[FBSDKGraphRequest alloc] initWithGraphPath:graphPath parameters:parameters];
+}
+
+- (nonnull id<FBSDKGraphRequest>)createGraphRequestWithGraphPath:(nonnull NSString *)graphPath
+                                                      parameters:(nonnull NSDictionary<NSString *, id> *)parameters
+                                                      HTTPMethod:(nonnull FBSDKHTTPMethod)method
+{
+  return [[FBSDKGraphRequest alloc] initWithGraphPath:graphPath
+                                           parameters:parameters
+                                           HTTPMethod:method];
+}
+
+- (nonnull id<FBSDKGraphRequest>)createGraphRequestWithGraphPath:(NSString *)graphPath
+                                                      parameters:(NSDictionary *)parameters
+                                                     tokenString:(NSString *)tokenString
+                                                         version:(nullable NSString *)version
+                                                      HTTPMethod:(FBSDKHTTPMethod)method
+{
+  return [[FBSDKGraphRequest alloc] initWithGraphPath:graphPath
+                                           parameters:parameters
+                                          tokenString:tokenString
+                                              version:version
+                                           HTTPMethod:method];
+}
+
+- (nonnull id<FBSDKGraphRequest>)createGraphRequestWithGraphPath:(nonnull NSString *)graphPath
+                                                      parameters:(nonnull NSDictionary *)parameters
+                                                           flags:(FBSDKGraphRequestFlags)flags
+{
+  return [[FBSDKGraphRequest alloc] initWithGraphPath:graphPath
+                                           parameters:parameters
+                                                flags:flags];
+}
+
 @end

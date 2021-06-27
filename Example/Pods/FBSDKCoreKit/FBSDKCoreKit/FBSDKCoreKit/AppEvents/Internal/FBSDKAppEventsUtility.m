@@ -28,19 +28,20 @@
 #import "FBSDKAppEventsConfigurationManager.h"
 #import "FBSDKAppEventsDeviceInfo.h"
 #import "FBSDKConstants.h"
+#import "FBSDKCoreKitBasicsImport.h"
 #import "FBSDKDynamicFrameworkLoader.h"
 #import "FBSDKError.h"
 #import "FBSDKInternalUtility.h"
 #import "FBSDKLogger.h"
 #import "FBSDKSettings.h"
 #import "FBSDKSettings+Internal.h"
-#import "FBSDKTimeSpentData.h"
 
 #define FBSDK_APPEVENTSUTILITY_ANONYMOUSIDFILENAME @"com-facebook-sdk-PersistedAnonymousID.json"
 #define FBSDK_APPEVENTSUTILITY_ANONYMOUSID_KEY @"anon_id"
 #define FBSDK_APPEVENTSUTILITY_MAX_IDENTIFIER_LENGTH 40
 
 static NSArray<NSString *> *standardEvents;
+static ASIdentifierManager *_cachedAdvertiserIdentifierManager;
 
 @implementation FBSDKAppEventsUtility
 
@@ -73,6 +74,20 @@ static NSArray<NSString *> *standardEvents;
   ];
 }
 
+// Transitional singleton introduced as a way to change the usage semantics
+// from a type-based interface to an instance-based interface.
+// The goal is to move from:
+// ClassWithoutUnderlyingInstance -> ClassRelyingOnUnderlyingInstance -> Instance
++ (instancetype)shared
+{
+  static dispatch_once_t nonce;
+  static id instance;
+  dispatch_once(&nonce, ^{
+    instance = [self new];
+  });
+  return instance;
+}
+
 + (NSMutableDictionary *)activityParametersDictionaryForEvent:(NSString *)eventCategory
                                     shouldAccessAdvertisingID:(BOOL)shouldAccessAdvertisingID
 {
@@ -80,13 +95,13 @@ static NSArray<NSString *> *standardEvents;
   [FBSDKTypeUtility dictionary:parameters setObject:eventCategory forKey:@"event"];
 
   if (shouldAccessAdvertisingID) {
-    NSString *advertiserID = [[self class] advertiserID];
+    NSString *advertiserID = [self.shared advertiserID];
     [FBSDKTypeUtility dictionary:parameters setObject:advertiserID forKey:@"advertiser_id"];
   }
 
   [FBSDKTypeUtility dictionary:parameters setObject:[FBSDKBasicUtility anonymousID] forKey:FBSDK_APPEVENTSUTILITY_ANONYMOUSID_KEY];
 
-  FBSDKAdvertisingTrackingStatus advertisingTrackingStatus = [FBSDKSettings getAdvertisingTrackingStatus];
+  FBSDKAdvertisingTrackingStatus advertisingTrackingStatus = [FBSDKSettings advertisingTrackingStatus];
   if (advertisingTrackingStatus != FBSDKAdvertisingTrackingUnspecified) {
     [FBSDKTypeUtility dictionary:parameters setObject:@([FBSDKSettings isAdvertiserTrackingEnabled]).stringValue forKey:@"advertiser_tracking_enabled"];
   }
@@ -128,7 +143,7 @@ static NSArray<NSString *> *standardEvents;
 
   dispatch_once(&fetchBundleOnce, ^{
     NSBundle *mainBundle = [NSBundle mainBundle];
-    urlSchemes = [[NSMutableArray alloc] init];
+    urlSchemes = [NSMutableArray new];
     for (NSDictionary<NSString *, id> *fields in [mainBundle objectForInfoDictionaryKey:@"CFBundleURLTypes"]) {
       NSArray<NSString *> *schemesForType = fields[@"CFBundleURLSchemes"];
       if (schemesForType) {
@@ -144,7 +159,16 @@ static NSArray<NSString *> *standardEvents;
   return parameters;
 }
 
-+ (NSString *)advertiserID
+- (NSString *)advertiserID
+{
+  BOOL shouldUseCachedManagerIfAvailable = [FBSDKSettings shouldUseCachedValuesForExpensiveMetadata];
+  id<FBSDKDynamicFrameworkResolving> dynamicFrameworkResolver = FBSDKDynamicFrameworkLoader.shared;
+  return [self _advertiserIDFromDynamicFrameworkResolver:dynamicFrameworkResolver
+                                  shouldUseCachedManager:shouldUseCachedManagerIfAvailable];
+}
+
+- (NSString *)_advertiserIDFromDynamicFrameworkResolver:(id<FBSDKDynamicFrameworkResolving>)dynamicFrameworkResolver
+                                 shouldUseCachedManager:(BOOL)shouldUseCachedManager
 {
   if (!FBSDKSettings.isAdvertiserIDCollectionEnabled) {
     return nil;
@@ -156,15 +180,26 @@ static NSArray<NSString *> *standardEvents;
     }
   }
 
-  NSString *result = nil;
+  ASIdentifierManager *manager = [self _asIdentifierManagerWithShouldUseCachedManager:shouldUseCachedManager
+                                                             dynamicFrameworkResolver:dynamicFrameworkResolver];
+  return manager.advertisingIdentifier.UUIDString;
+}
 
-  Class ASIdentifierManagerClass = fbsdkdfl_ASIdentifierManagerClass();
-  if ([ASIdentifierManagerClass class]) {
-    ASIdentifierManager *manager = [ASIdentifierManagerClass sharedManager];
-    result = manager.advertisingIdentifier.UUIDString;
+- (ASIdentifierManager *)_asIdentifierManagerWithShouldUseCachedManager:(BOOL)shouldUseCachedManager
+                                               dynamicFrameworkResolver:(id<FBSDKDynamicFrameworkResolving>)dynamicFrameworkResolver
+{
+  if (shouldUseCachedManager && _cachedAdvertiserIdentifierManager) {
+    return _cachedAdvertiserIdentifierManager;
   }
 
-  return result;
+  Class ASIdentifierManagerClass = [dynamicFrameworkResolver asIdentifierManagerClass];
+  ASIdentifierManager *manager = [ASIdentifierManagerClass sharedManager];
+  if (shouldUseCachedManager) {
+    _cachedAdvertiserIdentifierManager = manager;
+  } else {
+    _cachedAdvertiserIdentifierManager = nil;
+  }
+  return manager;
 }
 
 + (BOOL)isStandardEvent:(nullable NSString *)event
@@ -181,7 +216,7 @@ static NSArray<NSString *> *standardEvents;
 {
   [[NSFileManager defaultManager] removeItemAtPath:[[self class] persistenceFilePath:FBSDK_APPEVENTSUTILITY_ANONYMOUSIDFILENAME]
                                              error:NULL];
-  [[NSFileManager defaultManager] removeItemAtPath:[[self class] persistenceFilePath:FBSDKTimeSpentFilename]
+  [[NSFileManager defaultManager] removeItemAtPath:[[self class] persistenceFilePath:@"com-facebook-sdk-AppEventsTimeSpent.json"]
                                              error:NULL];
 }
 
@@ -277,7 +312,7 @@ static NSArray<NSString *> *standardEvents;
 
     [mutableSet addCharactersInString:@"- "];
     restOfStringCharacterSet = [mutableSet copy];
-    cachedIdentifiers = [[NSMutableSet alloc] init];
+    cachedIdentifiers = [NSMutableSet new];
   });
 
   @synchronized(self) {
@@ -319,7 +354,7 @@ static NSArray<NSString *> *standardEvents;
   NSString *tokenString = token.tokenString;
   NSString *clientTokenString = [FBSDKSettings clientToken];
 
-  if (!tokenString || ![appID isEqualToString:token.appID]) {
+  if (![appID isEqualToString:token.appID]) {
     // If there's a logging override app id present
     // then we don't want to use the client token since the client token
     // is intended to match up with the primary app id
@@ -335,14 +370,14 @@ static NSArray<NSString *> *standardEvents;
   return tokenString;
 }
 
-+ (long)unixTimeNow
++ (NSTimeInterval)unixTimeNow
 {
-  return (long)round([NSDate date].timeIntervalSince1970);
+  return round([NSDate date].timeIntervalSince1970);
 }
 
-+ (time_t)convertToUnixTime:(NSDate *)date
++ (NSTimeInterval)convertToUnixTime:(NSDate *)date
 {
-  return (time_t)round([date timeIntervalSince1970]);
+  return round([date timeIntervalSince1970]);
 }
 
 + (BOOL)isDebugBuild
@@ -376,7 +411,7 @@ static NSArray<NSString *> *standardEvents;
 + (BOOL)shouldDropAppEvent
 {
   if (@available(iOS 14.0, *)) {
-    if ([FBSDKSettings getAdvertisingTrackingStatus] == FBSDKAdvertisingTrackingDisallowed && ![FBSDKAppEventsConfigurationManager cachedAppEventsConfiguration].eventCollectionEnabled) {
+    if ([FBSDKSettings advertisingTrackingStatus] == FBSDKAdvertisingTrackingDisallowed && ![FBSDKAppEventsConfigurationManager cachedAppEventsConfiguration].eventCollectionEnabled) {
       return YES;
     }
   }
@@ -435,5 +470,21 @@ static NSArray<NSString *> *standardEvents;
   NSUInteger matches = [regex numberOfMatchesInString:text options:0 range:NSMakeRange(0, [text length])];
   return matches > 0;
 }
+
+#if DEBUG
+ #if FBSDKTEST
+
++ (ASIdentifierManager *)cachedAdvertiserIdentifierManager
+{
+  return _cachedAdvertiserIdentifierManager;
+}
+
++ (void)setCachedAdvertiserIdentifierManager:(ASIdentifierManager *)manager
+{
+  _cachedAdvertiserIdentifierManager = manager;
+}
+
+ #endif
+#endif
 
 @end
