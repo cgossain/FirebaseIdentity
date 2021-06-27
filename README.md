@@ -117,7 +117,7 @@ There are some user profile changes in Firebase that require a recent login. In 
 
 This library handles this error via the `AuthManagerReauthenticating` protocol.
 
-However as an added bonus, this library also tracks the last user sign in time and will optimistically request reauthentication if more that 5 minutes have elapsed since the last sign in (5 minutes matches the currently documented Firebase recent sign in threshhold). The benifit of tracking this locally is that we can avoid an additional network request that we know will generate this error anyways.
+However as an added bonus, this library also tracks the last user sign in time and will optimistically request reauthentication if more that 5 minutes have elapsed since the last sign in (5 minutes matches the currently documented Firebase recent sign in threshhold). The benefit of tracking this locally is that we can avoid an additional network request that we know will generate this error anyways.
 
 Reauthentication only applies when a user is already signed in so a good place to implement this protocol would be on a view controller that provides the account profile change UI. For example,
 
@@ -173,6 +173,47 @@ extension AccountViewController: AuthManagerReauthenticating {
 ```
 
 This is implemented in the `SignedInViewController` in the included example app.
+
+### Account Deletion
+
+You may want to provide your users the ability to delete their own account.
+
+This library facilitates this by providing the `DeleteAccountOperation`.
+
+To delete a users' account:
+
+```
+...
+
+// optionally provide database refs to delete (i.e. user scoped refs); these will be deleted before the account is deleted
+let userRefs: [DatabaseReference]? = [userRef1, userRef2, ...]
+
+// create a new op instance
+let deleteAccountOp = DeleteAccountOperation(refs: userRefs)
+deleteAccountOp.deleteAccountCompletionBlock = { [unowned self] (result) in
+    DispatchQueue.main.async {
+        switch result {
+        case .success(let user):
+            // post account deletion (i.e. show login screen, track event, etc.)
+
+        case .failure(let error):
+            switch error {
+            case .cancelledByUser:
+                break
+            case .other(let msg):
+                // show alert
+            }
+        }
+    }
+}
+
+// pass the op to the AuthManager
+AuthManager.shared.deleteAccount(with: deleteAccountOp)
+
+...
+
+```
+
 
 ## Example
 
