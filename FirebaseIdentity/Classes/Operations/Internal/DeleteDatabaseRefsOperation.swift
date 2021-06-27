@@ -29,7 +29,7 @@ import FirebaseDatabase
 /// An operation that deletes the data at the given database refs.
 final class DeleteDatabaseRefsOperation: Procedure {
     /// The database refs to be deleted.
-    let refs: [DatabaseReference]
+    let refs: [DatabaseReference]?
     
     /// A block called when the operation completes but just before the operation moves to the `finished` state.
     var deleteDatabaseRefsCompletionBlock: ((Error?) -> Void)?
@@ -44,7 +44,7 @@ final class DeleteDatabaseRefsOperation: Procedure {
     
     
     // MARK: - Lifecycle
-    init(refs: [DatabaseReference]) {
+    init(refs: [DatabaseReference]?) {
         self.refs = refs
         super.init()
     }
@@ -62,6 +62,10 @@ final class DeleteDatabaseRefsOperation: Procedure {
         }
         
         // delete each ref
+        guard let refs = self.refs else {
+            return // no refs provided; finish immediately; defer will finish
+        }
+        
         for ref in refs {
             let op = DeleteDatabaseRefOperation(ref: ref)
             op.deleteDatabaseRefCompletionBlock = { (error) in

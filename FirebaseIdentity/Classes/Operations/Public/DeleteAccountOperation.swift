@@ -61,7 +61,7 @@ public struct DeletedUserMetadata {
 /// 3. Deletes the user account from Firebase
 final public class DeleteAccountOperation: Procedure {
     /// The user data that should be deleted as part of the account deletion operation
-    public let refs: [DatabaseReference]
+    public let refs: [DatabaseReference]?
     
     /// A block called when the operation completes but just before the operation moves to the `finished` state.
     public var deleteAccountCompletionBlock: DeleteAccountHandler?
@@ -77,7 +77,7 @@ final public class DeleteAccountOperation: Procedure {
     
     
     // MARK: - Lifecycle
-    public init(refs: [DatabaseReference]) {
+    public init(refs: [DatabaseReference]? = nil) {
         self.refs = refs
         super.init()
     }
@@ -100,7 +100,7 @@ final public class DeleteAccountOperation: Procedure {
             finish()
         }
         
-        // 2. delete account data
+        // 2. delete account data if refs provided
         let deleteAccountDataOp = DeleteDatabaseRefsOperation(refs: self.refs)
         deleteAccountDataOp.deleteDatabaseRefsCompletionBlock = { [unowned self] (deleteDataError) in
             if let deleteDataError = deleteDataError {
