@@ -28,4 +28,3 @@ Pod::Spec.new do |s|
   s.dependency 'Firebase/Database'
   s.dependency 'ProcedureKit'
 end
-
