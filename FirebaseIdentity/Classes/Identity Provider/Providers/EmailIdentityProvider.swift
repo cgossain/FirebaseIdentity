@@ -26,14 +26,14 @@ import Foundation
 import FirebaseAuth
 
 public final class EmailIdentityProvider: IdentityProvider {
+    /// The identity provider ID of the receiver.
+    public let providerID: IdentityProviderID
+    
     /// The email address.
     public let email: String
     
     /// The password.
     public let password: String
-    
-    /// The identity provider ID.
-    public let providerID: IdentityProviderID
     
     
     // MARK: - Lifecycle

@@ -27,7 +27,7 @@ import FirebaseAuth
 import CryptoKit
 
 public protocol IdentityProvider {
-    /// The provider ID of the receiver.
+    /// The identity provider ID of the receiver.
     var providerID: IdentityProviderID { get }
     
     /// Starts the identity providers sign up routine.

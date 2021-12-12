@@ -26,11 +26,11 @@ import Foundation
 import FirebaseAuth
 
 public final class FaceboookIdentityProvider: IdentityProvider {
+    /// The identity provider ID of the receiver.
+    public let providerID: IdentityProviderID
+    
     /// The facebook access token.
     public let accessToken: String
-    
-    /// The identity provider ID.
-    public let providerID: IdentityProviderID
     
     
     // MARK: - Lifecycle

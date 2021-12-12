@@ -70,7 +70,6 @@ public enum ProfileChangeError: Error {
         }
     }
     
-    
     /// Can be trigged by Firebase error 17014
     ///
     /// An indication that the user tried to perform a security sensitive action that requires them to have

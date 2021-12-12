@@ -28,7 +28,7 @@ import Foundation
 public protocol AuthManagerReauthenticating: AnyObject {
     /// Called when an action triggers the `requiresRecentLogin` from Firebase.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///     - manager: The auth manager instance that is requesting reauthentication.
     ///     - providers: An array of available/linked providers that should be used for reauthentication. These can either be presented as options to a user, or the
     ///                  first item in the list can automatically be used for reauthentication. The providers are pre-sorted according to the priority order specified in

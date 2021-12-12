@@ -33,6 +33,9 @@ public enum SignInWithAppleIdentityProviderError: Error {
 
 @available(iOS 13.0, *)
 public final class SignInWithAppleIdentityProvider: IdentityProvider {
+    /// The identity provider ID of the receiver.
+    public let providerID: IdentityProviderID
+    
     /// The Apple ID credential from Apple's response.
     public let appleIDCredential: ASAuthorizationAppleIDCredential
     
@@ -41,9 +44,6 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
     
     /// The JSON Web Token (JWT) serialized from the ASAuthorizationAppleIDCredential.
     public let identityToken: String
-    
-    /// The identity provider ID.
-    public let providerID: IdentityProviderID
     
     
     // MARK: - Lifecycle

@@ -25,9 +25,12 @@
 import Foundation
 
 public struct IdentityProviderUserInfo {
+    /// The identity provider ID of the receiver.
     public let providerID: IdentityProviderID
     
+    /// The email address.
     public let email: String?
     
+    /// The display name.
     public let displayName: String?
 }
