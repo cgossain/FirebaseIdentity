@@ -1,26 +1,25 @@
 # FirebaseIdentity
 
+The primary motivation of this library is to make building custom UI around the Firebase Authentication
+service easier on iOS for those of us that do not want to use the FirebaseUI library. 
+
+It does this by implementing standard authentication workflows and error handling (i.e. account linking, profile 
+updates, set/update password, reauthentication, enable/disable thrid-party identity providers, account deletion,
+auto-retry, etc.). This is done by abstracting away a lot of the error handling logic into a singleton
+state machine (called AuthManager) capable of handling most Firebase authentication use cases.
+
 [![CI Status](https://img.shields.io/travis/cgossain/FirebaseIdentity.svg?style=flat)](https://travis-ci.org/cgossain/FirebaseIdentity)
 [![Version](https://img.shields.io/cocoapods/v/FirebaseIdentity.svg?style=flat)](https://cocoapods.org/pods/FirebaseIdentity)
 [![License](https://img.shields.io/cocoapods/l/FirebaseIdentity.svg?style=flat)](https://cocoapods.org/pods/FirebaseIdentity)
 [![Platform](https://img.shields.io/cocoapods/p/FirebaseIdentity.svg?style=flat)](https://cocoapods.org/pods/FirebaseIdentity)
 
-## Introduction
-
-The purpose of this library is to make building custom frontend UI around the Firebase Authentication
-service easier on iOS for those of us that do not want to use the FirebaseUI library. It does this by implementing
-standard authentication workflows and error handling (i.e. account linking, profile updates, set/update password, reauthentication,
-enabling/disabling thrid-party providers, account deletion, auto-retry, etc.). This is done by abstracting away
-a lot of the error handling logic into a singleton state machine ('AuthManager') cabable of handling most Firebase
-authentication use cases.
-
 ## Usage
 
-### AuthManager Singleton
+### AuthManager
 
-The primary class you need to work with is `AuthManager`.
+The main class you'll work with is `AuthManager`, and is intended to be used as a singleton.
 
-The setup should be done early in the app lifecycle, but after initializing the Firebase library.
+The setup should be done as early as possible in the app lifecycle after initializing the Firebase library.
 
 <pre>
 func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
@@ -65,7 +64,7 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 
 Sign-in providers are modelled by the `IdentityProvider` class.
 
-Currently only `EmailIdentityProvider` and `FacebookIdentityProvider` are implemented, but you could easily subclass `IdentityProvider` to implement any other provider. Feel free to submit a pull request if you implement other ones :)
+Currently the only providers that have been implemented are `EmailIdentityProvider` and `FacebookIdentityProvider`, but you could easily subclass `IdentityProvider` to implement any other identity provider you. Feel free to submit a pull request if you implement other ones :)
 
 To sign up a new user using email authentication:
 
@@ -86,7 +85,7 @@ To sign up/in a user with Facebook authentication:
 
 ```
 let requestedPermissions: [String] = ["email"]
-self.fbLoginManager.logIn(permissions: requestedPermissions, from: self) { (result, error) in
+fbLoginManager.logIn(permissions: requestedPermissions, from: self) { (result, error) in
     guard let result = result, !result.isCancelled else {
         if let error = error {
             print(error.localizedDescription)
@@ -108,18 +107,20 @@ self.fbLoginManager.logIn(permissions: requestedPermissions, from: self) { (resu
     }
 }
 ```
+ 
+There are many other examples included in the demo project that you should check out.
 
-There are many other examples included in the sample application that you should check out.
+### AuthManagerReauthenticating
 
-### Reauthentication
+There are some user profile changes in Firebase that require a recent login. In particular, Firebase will trigger the `FIRAuthErrorCodeRequiresRecentLogin = 17014,` error in these situations.
 
-There are some user profile changes in Firebase that require a recent login. In particular Firebase will trigger the `FIRAuthErrorCodeRequiresRecentLogin = 17014,` error in these situation.
+This library handles this error via the `AuthManagerReauthenticating` protocol. 
 
-This library handles this error via the `AuthManagerReauthenticating` protocol.
+Given that a user may have multiple identity providers linked to their account, this protocol is used to offload the decision of which one to use for reauthentication. One way to implement this could be by simply presenting UI to the user asking them to reauthenticate using one of the given identity providers (further offloading the decision to the user). Alternatively, you could implement by simply asking for reauthentication from the highest priority identify provider.
 
-However as an added bonus, this library also tracks the last user sign in time and will optimistically request reauthentication if more that 5 minutes have elapsed since the last sign in (5 minutes matches the currently documented Firebase recent sign in threshhold). The benefit of tracking this locally is that we can avoid an additional network request that we know will generate this error anyways.
+As an added bonus, this library also locally caches the last user sign in date and will optimistically request reauthentication if more that 5 minutes (the currently documented Firebase recent sign in threshhold) have elapsed since the last sign in. The benefit of caching this locally is that we can avoid an additional network request that we know will generate the `17014` error anyways (slightly speeds things up from the users perspective).
 
-Reauthentication only applies when a user is already signed in so a good place to implement this protocol would be on a view controller that provides the account profile change UI. For example,
+Keep in mind that reauthentication only applies when a user is already signed in, so a good place to implement this protocol would be on a view controller that provides UI related to account management. For example,
 
 ```
 extension AccountViewController: AuthManagerReauthenticating {
@@ -172,7 +173,7 @@ extension AccountViewController: AuthManagerReauthenticating {
 }
 ```
 
-This is implemented in the `SignedInViewController` in the included example app.
+This is implemented in the `SignedInViewController` in the included demo project.
 
 ### Account Deletion
 
@@ -217,17 +218,17 @@ AuthManager.shared.deleteAccount(with: deleteAccountOp)
 
 ## Example
 
-The included Example project showcases the funtionality of this library.
+The included demo project showcases the full functionality of this library.
 
 ### Prerequisites
 
-To run the example project, clone the repo, and run `pod install` from the Example directory first.
+To run the demo project, clone the repo, and run `pod install` from the Example directory first.
 
-To run the example project you'll also need a Firebase account. Once you're account has been created, follow the instructions to create a demo project. Once your demo project has been created in your Firebase account, you'll need to download the project's corresponding `GoogleService-Info.plist` and add it the demo project. The Firebase framework automatically detects this file when the app launches, and will configure the environment accordingly.
+You'll also need a Firebase account. From your Firebase account, follow the instructions to create a demo project and add an iOS app to it. You'll then need to download its corresponding `GoogleService-Info.plist` file and add it the demo project in Xcode. The Firebase framework automatically detects this file when the app launches and will configure the environment accordingly.
 
 ## Requirements
 
-- iOS 11.4+
+- iOS 12.4+
 - Swift 5+
 - A Firebase account
 
