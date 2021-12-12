@@ -25,7 +25,7 @@
 import Foundation
 
 /// A protocol for an object that is capable of reauthenticating an AuthManager.
-public protocol AuthManagerReauthenticating: class {
+public protocol AuthManagerReauthenticating: AnyObject {
     /// Called when an action triggers the `requiresRecentLogin` from Firebase.
     ///
     /// - parameters:
