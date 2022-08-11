@@ -171,7 +171,7 @@ SPEC CHECKSUMS:
   FirebaseCoreDiagnostics: aaa87098082c4d4bdd1a9557b1186d18ca85ce8c
   FirebaseCoreInternal: a13302b0088fbf5f38b79b6ece49c2af7d3e05d6
   FirebaseDatabase: e93f5441b549ea4492a8d8a0c7d612ac46c1b12a
-  FirebaseIdentity: c0e52b4a8994e3edce9804f4e1a27e60e52d5ac0
+  FirebaseIdentity: 80b5784f3aaf6cbcf5fa2194bb68294710863dc8
   FirebaseInstallations: 61db1054e688d2bdc4e2b3f744c1b086e913b742
   GoogleAppMeasurement: 5d69e04287fc2c10cc43724bfa4bf31fc12c3dff
   GoogleDataTransport: 1c8145da7117bd68bbbed00cf304edb6a24de00f

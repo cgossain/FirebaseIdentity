@@ -22,6 +22,7 @@
 //  THE SOFTWARE.
 //
 
+import Combine
 import FirebaseAuth
 import Foundation
 import ProcedureKit
@@ -86,6 +87,7 @@ public final class AuthManager {
     public let auth: Auth
     
     /// The authentication state of the receiver.
+    @Published
     public private(set) var authState: AuthState = .notDetermined
     
     /// The object that will handle reauthentication callbacks.

@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   
   s.source           = { :git => 'https://github.com/cgossain/FirebaseIdentity.git', :tag => s.version.to_s }
   s.source_files = 'Sources/FirebaseIdentity/**/*'
-  s.ios.deployment_target = '12.0'
+  s.ios.deployment_target = '13.0'
   s.swift_version    = '5.0'
   s.static_framework = true
   
