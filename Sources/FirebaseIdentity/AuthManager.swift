@@ -88,7 +88,16 @@ public final class AuthManager {
     
     /// The authentication state of the receiver.
     @Published
-    public private(set) var authState: AuthState = .notDetermined
+    public private(set) var authState: AuthState = .notDetermined {
+        didSet {
+            NotificationCenter.default
+                .post(
+                    name: .authenticationStateChanged,
+                    object: self,
+                    userInfo: nil
+                )
+        }
+    }
     
     /// The object that will handle reauthentication callbacks.
     public weak var reauthenticator: AuthManagerReauthenticating?
@@ -568,13 +577,6 @@ extension AuthManager {
                 self.authState = .notAuthenticated
                 self.lastReauthenticationDate = nil
             }
-            
-            NotificationCenter.default
-                .post(
-                    name: .authenticationStateChanged,
-                    object: self,
-                    userInfo: nil
-                )
         }
     }
     
