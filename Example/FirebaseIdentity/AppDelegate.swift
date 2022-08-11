@@ -44,13 +44,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - UIApplicationDelegate
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        let aWindow = UIWindow()
-        self.window = aWindow
-        
-        appController.installRootViewController(in: aWindow)
-        
         // firebase
         FirebaseApp.configure()
+        
+        // access default instance just to initialize the subscriptions
+        // this wouldn't be an issue if using dependency injection
+        print(AuthManager.default.authState)
         
         // facebook
         ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -63,12 +62,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
                 
                 switch manager.authState {
-                case .notDetermined, .notAuthenticated:
+                case .notDetermined:
+                    // show loading UI
+                    break
+                case .notAuthenticated:
                     AppController.logout()
                 case .authenticated:
                     AppController.login()
                 }
             })
+        
+        let aWindow = UIWindow()
+        self.window = aWindow
+        appController.installRootViewController(in: aWindow)
         
         return true
     }

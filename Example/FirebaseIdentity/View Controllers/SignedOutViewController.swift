@@ -59,7 +59,6 @@ class SignedOutViewController: StaticTableViewController {
         title = "Welcome"
         reloadSections()
     }
-    
 }
 
 fileprivate extension SignedOutViewController {
