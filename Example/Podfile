@@ -1,11 +1,11 @@
-platform :ios, '12.4'
+platform :ios, '12.0'
 use_frameworks!
 
 target 'FirebaseIdentity_Example' do
-  pod 'FirebaseIdentity', :path => '../'
   pod 'AppController'
+  pod 'FBSDKLoginKit', '~> 12.0'
+  pod 'FirebaseIdentity', :path => '../'
   pod 'Static'
-  pod 'FBSDKLoginKit'
 
   target 'FirebaseIdentity_Tests' do
     inherit! :search_paths
