@@ -22,6 +22,5 @@ Pod::Spec.new do |s|
   
   s.dependency 'Firebase/Auth'
   s.dependency 'Firebase/Core'
-  s.dependency 'Firebase/Database'
   s.dependency 'ProcedureKit'
 end

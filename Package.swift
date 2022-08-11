@@ -27,7 +27,6 @@ let package = Package(
             name: "FirebaseIdentity",
             dependencies: [
                 .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
-                .product(name: "FirebaseDatabase", package: "firebase-ios-sdk"),
                 .product(name: "ProcedureKit", package: "ProcedureKit"),
             ]
         ),
