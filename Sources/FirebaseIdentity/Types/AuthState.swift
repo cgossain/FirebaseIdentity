@@ -1,5 +1,5 @@
 //
-//  DeleteUserAccountOperation.swift
+//  AuthState.swift
 //
 //  Copyright (c) 2022 Christian Gossain
 //
@@ -24,25 +24,25 @@
 
 import FirebaseAuth
 import Foundation
-import ProcedureKit
 
-/// An operation that delete the currently authenticated Firebase user.
-final class DeleteUserAccountOperation: Procedure {
-    
-    /// A block called when the operation completes but just before the operation moves to the `finished` state.
-    var deleteFirebaseUserCompletionBlock: AuthManager.ProfileChangeHandler?
-    
-    // MARK: - Procedure
-    
-    override func execute() {
-        DispatchQueue.main.async {
-            // using this internal method on the singleton instance (as opossed to directly
-            // using -deleteAccount on the firebase user) has the benefit of tying into the
-            // AuthManager's error handling mechanism
-            AuthManager.default.deleteAccount { (result) in
-                self.deleteFirebaseUserCompletionBlock?(result)
-                self.finish()
-            }
+/// The authenticaion state.
+public enum AuthState {
+    case notDetermined
+    case notAuthenticated
+    case authenticated(User)
+}
+
+extension AuthState: Equatable {
+    public static func == (lhs: AuthState, rhs: AuthState) -> Bool {
+        switch (lhs, rhs) {
+        case (.notDetermined, .notDetermined):
+            return true
+        case (.notAuthenticated, .notAuthenticated):
+            return true
+        case (.authenticated, .authenticated):
+            return true
+        default:
+            return false
         }
     }
 }

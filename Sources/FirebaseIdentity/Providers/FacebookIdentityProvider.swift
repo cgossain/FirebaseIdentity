@@ -44,21 +44,30 @@ public final class FaceboookIdentityProvider: IdentityProviding {
     
     // MARK: - IdentityProviding
     
-    public func signUp(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func signUp(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         auth.signIn(
             with: credential,
             completion: completion
         )
     }
     
-    public func signIn(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func signIn(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         auth.signIn(
             with: credential,
             completion: completion
         )
     }
     
-    public func reauthenticate(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func reauthenticate(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return
@@ -71,7 +80,10 @@ public final class FaceboookIdentityProvider: IdentityProviding {
             )
     }
     
-    public func link(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func link(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return

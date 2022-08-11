@@ -28,6 +28,15 @@ import FirebaseIdentity
 import Static
 import UIKit
 
+extension AuthManager {
+    var authenticatedUser: User? {
+        guard case let .authenticated(user) = authState else {
+            return nil
+        }
+        return user
+    }
+}
+
 class SignedInViewController: StaticTableViewController {
     
     // MARK: - Lifecycle
@@ -44,13 +53,8 @@ class SignedInViewController: StaticTableViewController {
         super.viewDidLoad()
         title = "Settings"
         
-        guard let authenticatedUser = AuthManager.default.authenticatedUser else {
-            return
-        }
-        
-        print(authenticatedUser.debugDescription)
-        
-        AuthManager.default.reauthenticator = self
+        AuthManager.default
+            .reauthenticator = self
         
         reloadSections()
     }
@@ -378,25 +382,43 @@ fileprivate extension SignedInViewController {
 //            }
 //        })
         
-        return Section(header: .title("Account"),
-                       rows: [displayNameRow, emailRow, emailSilentReauthRow, passwordRow, passwordSilentReauthRow, linkFacebookRow])
+        return Section(
+            header: .title("Account"),
+            rows: [
+                displayNameRow,
+                emailRow,
+                emailSilentReauthRow,
+                passwordRow,
+                passwordSilentReauthRow,
+                linkFacebookRow
+            ]
+        )
     }
     
     var linkedProvidersSection: Section {
         var rows: [Row] = []
-        AuthManager.default.authenticatedUser?.providerData.forEach({ (providerInfo) in
-            var row = Row(text: "Provider ID - \(providerInfo.providerID)", cellClass: SubtitleCell.self)
-            row.detailText = "UID: \(providerInfo.uid), Email: \(providerInfo.email ?? "n/a"), Display Name: \(providerInfo.displayName ?? "n/a")"
-            rows.append(row)
-        })
+        AuthManager.default.linkedProviders
+            .forEach { providerInfo in
+                var row = Row(text: "Provider ID - \(providerInfo.providerID)", cellClass: SubtitleCell.self)
+                row.detailText = "UID: \(providerInfo.uid), Email: \(providerInfo.email ?? "n/a"), Display Name: \(providerInfo.displayName ?? "n/a")"
+                rows.append(row)
+            }
+        
+//        AuthManager.default.authenticatedUser?.providerData.forEach({ (providerInfo) in
+//            var row = Row(text: "Provider ID - \(providerInfo.providerID)", cellClass: SubtitleCell.self)
+//            row.detailText = "UID: \(providerInfo.uid), Email: \(providerInfo.email ?? "n/a"), Display Name: \(providerInfo.displayName ?? "n/a")"
+//            rows.append(row)
+//        })
+        
         return Section(header: .title("Linked Providers"), rows: rows)
     }
     
     var signOutSection: Section {
         var signOutRow = Row(text: "Sign Out", cellClass: Value1Cell.self)
         signOutRow.selection = {
+            AuthManager.default
+                .signOut()
             
-            AuthManager.default.signOut()
             LoginManager().logOut()
         }
         return Section(rows: [signOutRow])
@@ -405,19 +427,17 @@ fileprivate extension SignedInViewController {
     var deleteAccountSection: Section {
         var deleteAccountRow = Row(text: "Delete Account", cellClass: Value1Cell.self)
         deleteAccountRow.selection = {
-            let deleteAccountOp = DeleteAccountOperation(refs: [])
-            deleteAccountOp.deleteAccountCompletionBlock = { (result) in
-                switch result {
-                case .success(let user):
-                    print("User Deleted Duccessfully: \(user)")
-                    
-                case .failure(let error):
-                    self.showDeleteAccountOperationErrorAlert(for: error)
+            AuthManager.default
+                .deleteAccount { (result) in
+                    switch result {
+                    case .success(let user):
+                        print("User Deleted Duccessfully: \(user)")
+                        
+                    case .failure(let error):
+                        self.showProfileChangeErrorAlert(for: error)
+                    }
                 }
-            }
-            AuthManager.default.deleteAccount(with: deleteAccountOp)
         }
         return Section(rows: [deleteAccountRow])
     }
-    
 }

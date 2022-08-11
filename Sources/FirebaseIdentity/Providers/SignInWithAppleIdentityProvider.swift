@@ -78,7 +78,10 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     
     // MARK: - IdentityProviding
     
-    public func signUp(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func signUp(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         // the implementation of "sign up" is identical to "sign in"
         signIn(
             using: auth,
@@ -86,7 +89,10 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
         )
     }
     
-    public func signIn(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func signIn(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         var appleIDDisplayName = ""
         if let fullName = appleIDCredential.fullName {
             let formatter = PersonNameComponentsFormatter()
@@ -119,7 +125,10 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
         }
     }
     
-    public func reauthenticate(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func reauthenticate(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return
@@ -132,7 +141,10 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
             )
     }
     
-    public func link(using auth: Auth, completion: @escaping AuthManager.AuthDataResultCallback) {
+    public func link(
+        using auth: Auth,
+        completion: @escaping AuthManager.AuthDataResultCallback
+    ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return

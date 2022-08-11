@@ -66,7 +66,10 @@ public enum ProfileChangeError: Error {
         /// - parameters:
         ///     - authenticatedUser: The Firebase user on which the profile update was attempted (this should be the currently authenticated user)
         ///     - profileChangeType: The type of profile change that was attempted.
-        public init(authenticatedUser: User, profileChangeType: ProfileChangeType) {
+        public init(
+            authenticatedUser: User,
+            profileChangeType: ProfileChangeType
+        ) {
             self.authenticatedUser = authenticatedUser
             self.profileChangeType = profileChangeType
         }

@@ -31,7 +31,7 @@ final class AuthOperation<P: IdentityProviding>: Procedure {
     
     let provider: P
     
-    let authenticationType: AuthenticationType
+    let authenticationType: AuthType
     
     let completion: AuthManager.AuthDataResultCallback
     
@@ -42,7 +42,7 @@ final class AuthOperation<P: IdentityProviding>: Procedure {
     init(
         auth: Auth,
         provider: P,
-        authenticationType: AuthenticationType,
+        authenticationType: AuthType,
         completion: @escaping AuthManager.AuthDataResultCallback
     ) {
         self.auth = auth

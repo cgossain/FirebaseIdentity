@@ -1,5 +1,5 @@
 //
-//  AuthenticationType.swift
+//  AuthType.swift
 //
 //  Copyright (c) 2022 Christian Gossain
 //
@@ -24,7 +24,7 @@
 
 import Foundation
 
-public enum AuthenticationType {
+public enum AuthType {
     case signUp
     case signIn
     case reauthenticate

@@ -33,14 +33,17 @@ public enum AuthenticationError: Error {
         public let providerID: IdentityProviderID
         
         /// The type of authentication that was attempted.
-        public let authenticationType: AuthenticationType
+        public let authenticationType: AuthType
         
         /// Creates a new context with the given identity provider and authentication type.
         ///
         /// - parameters:
         ///     - providerID: The identity provider that was used to authenticate.
         ///     - authenticationType: The type of authentication that was attempted.
-        public init(providerID: IdentityProviderID, authenticationType: AuthenticationType) {
+        public init(
+            providerID: IdentityProviderID,
+            authenticationType: AuthType
+        ) {
             self.providerID = providerID
             self.authenticationType = authenticationType
         }
