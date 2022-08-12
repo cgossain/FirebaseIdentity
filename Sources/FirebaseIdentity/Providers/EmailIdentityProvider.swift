@@ -53,7 +53,7 @@ public final class EmailIdentityProvider: IdentityProviding {
     
     public func signUp(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         auth.createUser(
             withEmail: email,
@@ -64,7 +64,7 @@ public final class EmailIdentityProvider: IdentityProviding {
     
     public func signIn(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         auth.signIn(
             with: credential,
@@ -74,7 +74,7 @@ public final class EmailIdentityProvider: IdentityProviding {
     
     public func reauthenticate(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)
@@ -90,7 +90,7 @@ public final class EmailIdentityProvider: IdentityProviding {
     
     public func link(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)

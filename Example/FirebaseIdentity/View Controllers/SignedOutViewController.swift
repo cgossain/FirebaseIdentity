@@ -114,6 +114,7 @@ fileprivate extension SignedOutViewController {
         var fbSignUpInEmailNotSharedRow = Row(text: "Sign Up/In with Facebook (no email)", cellClass: Value1Cell.self)
         fbSignUpInEmailNotSharedRow.selection = { [unowned self] in
             let requestedPermissions: [String] = []
+            
             self.fbLoginManager.logIn(permissions: requestedPermissions, from: self) { (result, error) in
                 guard let result = result, !result.isCancelled else {
                     if let error = error {

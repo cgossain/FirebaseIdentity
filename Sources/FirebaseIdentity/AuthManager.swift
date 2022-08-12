@@ -27,6 +27,20 @@ import FirebaseAuth
 import Foundation
 import ProcedureKit
 
+/// The block signature for Firebase authentication callbacks.
+public typealias IdentityProviderCompletionHandler = (AuthDataResult?, Error?) -> Void
+
+/// The block that is invoked when an authentication related event completes. The parameter
+/// passed to the block is an `AuthManager.Result` object that may indicate that a
+/// further user action is required.
+public typealias AuthOperationCompletionHandler = (Result<AuthDataResult, AuthenticationError>) -> Void
+
+/// The block that is invoked when a profile change event completes.
+public typealias ProfileChangeCompletionHandler = (Result<User, ProfileChangeError>) -> Void
+
+/// The block that is optionally invoked when the `requestReauthentication()` method completes.
+public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationResult) -> Void
+
 /// An object that manages all Firebase authentication and user related events.
 public final class AuthManager {
     
@@ -55,25 +69,6 @@ public final class AuthManager {
         case failure(ProfileChangeError)
     }
     
-    public typealias AuthDataResultCallback = (AuthDataResult?, Error?) -> Void
-    
-    /// The block that is invoked when an authentication related event completes. The parameter
-    /// passed to the block is an `AuthManager.Result` object that may indicate that a
-    /// further user action is required.
-    public typealias AuthResultHandler = (Result<AuthDataResult, AuthenticationError>) -> Void
-    
-    /// The block that is invoked when a provider unlink event completes.
-    public typealias AuthUnlinkHandler = (Result<User, Error>) -> Void
-    
-    /// The block that is invoked when a profile change event completes.
-    public typealias ProfileChangeHandler = (Result<User, ProfileChangeError>) -> Void
-    
-    /// The block that is optionally invoked when the `reauthenticate()` method completes.
-    public typealias ReauthenticationHandler = (AuthenticationError?) -> Void
-    
-    /// The block that is optionally invoked when the `requestReauthentication()` method completes.
-    public typealias ReauthenticationRequestHandler = (AuthManager.ReauthenticationResult) -> Void
-    
     // MARK: - Properties
     
     /// The default instance.
@@ -87,8 +82,7 @@ public final class AuthManager {
     public let auth: Auth
     
     /// The authentication state of the receiver.
-    @Published
-    public private(set) var authState: AuthState = .notDetermined {
+    @Published public private(set) var authState: AuthState = .notDetermined {
         didSet {
             NotificationCenter.default
                 .post(
@@ -230,83 +224,57 @@ public final class AuthManager {
 
 extension AuthManager {
     
-    /// Enqueues a sign up operation.
+    /// Enqueues a sign up auth operation.
     public func signUp<P: IdentityProviding>(
         with provider: P,
-        completion: @escaping AuthResultHandler
+        completion: @escaping AuthOperationCompletionHandler
     ) {
-        authenticationQueue.addOperation(
-            AuthOperation(
-                auth: auth,
-                provider: provider,
-                authenticationType: .signUp
-            ) { (result, error) in
-                guard let error = error else {
-                    completion(.success(result!))
-                    return
-                }
-                
-                let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .signUp)
-                self.handleAuthOperationError(error, context: context, provider: provider, completion: completion)
-            }
+        enqueueAuthOperation(
+            with: provider,
+            authenticationType: .signUp,
+            completion: completion
         )
     }
     
-    /// Enqueues a sign in operation.
+    /// Enqueues a sign in auth operation.
     public func signIn<P: IdentityProviding>(
         with provider: P,
-        completion: @escaping AuthResultHandler
+        completion: @escaping AuthOperationCompletionHandler
     ) {
-        authenticationQueue.addOperation(
-            AuthOperation(
-                auth: auth,
-                provider: provider,
-                authenticationType: .signIn
-            ) { (result, error) in
-                guard let error = error else {
-                    completion(.success(result!))
-                    return
-                }
-                
-                let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .signIn)
-                self.handleAuthOperationError(error, context: context, provider: provider, completion: completion)
-            }
+        enqueueAuthOperation(
+            with: provider,
+            authenticationType: .signIn,
+            completion: completion
         )
     }
     
-    /// Enqueues a account linking operation.
+    /// Enqueues an account linking auth operation.
     public func linkWith<P: IdentityProviding>(
         with provider: P,
-        completion: @escaping AuthResultHandler
+        completion: @escaping AuthOperationCompletionHandler
     ) {
-        authenticationQueue.addOperation(
-            AuthOperation(
-                auth: auth,
-                provider: provider,
-                authenticationType: .link
-            ) { (result, error) in
-                guard let error = error else {
-                    completion(.success(result!))
-                    return
-                }
-                
-                let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .link)
-                self.handleAuthOperationError(error, context: context, provider: provider, completion: completion)
-            }
+        enqueueAuthOperation(
+            with: provider,
+            authenticationType: .link,
+            completion: completion
         )
     }
     
-    /// Enqueues a reauthentication operation.
+    /// Enqueues a reauthentication auth operation.
+    ///
+    /// After a successful reauthentication, this method will retry the previously attempted operation contained in the challenge object.
     public func reauthenticate<P: IdentityProviding>(
         with provider: P,
         for challenge: ProfileChangeReauthenticationChallenge,
-        completion: ReauthenticationHandler? = nil
+        completion: AuthOperationCompletionHandler? = nil
     ) {
-        reauthenticate(with: provider) { (result) in
+        enqueueAuthOperation(
+            with: provider,
+            authenticationType: .reauthenticate
+        ) { (result) in
             switch result {
             case .success(_):
                 self.lastReauthenticationDate = Date()
-                completion?(nil)
                 
                 // retry the profile change attempt that
                 // failed using the error context
@@ -327,12 +295,20 @@ extension AuthManager {
                     break
                 }
             case .failure(let error):
-                completion?(error)
-                
                 // notify the completion handler associated with the challenge about the failure
                 challenge.completion(.failure(.other(error.localizedDescription, challenge.context)))
             }
+            
+            // pass the result to the
+            // completion handler if
+            // provided
+            completion?(result)
         }
+    }
+    
+    /// Cancels a previously started reauthentication.
+    public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
+        challenge.completion(.failure(.cancelledByUser(challenge.context)))
     }
     
     /// Requests reauthentication.
@@ -360,8 +336,7 @@ extension AuthManager {
         
         let context = ProfileChangeError.Context(authenticatedUser: authenticatedUser, profileChangeType: .requestReauthentication)
         if let passwordForReauthentication = passwordForReauthentication,
-           let linkedEmailProviderUserInfo = linkedEmailProviderUserInfo,
-           let email = linkedEmailProviderUserInfo.email {
+           let email = linkedEmailProviderUserInfo?.email {
             let challenge = ProfileChangeReauthenticationChallenge(context: context) { (result) in
                 switch result {
                 case .success(_):
@@ -392,11 +367,6 @@ extension AuthManager {
         }
     }
     
-    /// Cancels a previously started reauthentication.
-    public func cancelReauthentication(for challenge: ProfileChangeReauthenticationChallenge) {
-        challenge.completion(.failure(.cancelledByUser(challenge.context)))
-    }
-    
     /// Signs out the current user.
     public func signOut() {
         try? auth.signOut()
@@ -419,7 +389,7 @@ extension AuthManager {
     public func updateDisplayName(
         to newDisplayName: String,
         passwordForReauthentication: String? = nil,
-        completion: @escaping ProfileChangeHandler
+        completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
             return // no-op
@@ -429,7 +399,8 @@ extension AuthManager {
         profileChangeRequest.displayName = newDisplayName
         profileChangeRequest.commitChanges { (error) in
             guard let error = error else {
-                // ensure the user is refreshed
+                // sync the user's profile
+                // data from the server
                 authenticatedUser.reload() { (_) in
                     completion(.success(authenticatedUser))
                 }
@@ -455,7 +426,7 @@ extension AuthManager {
     public func updateEmail(
         to newEmail: String,
         passwordForReauthentication: String? = nil,
-        completion: @escaping ProfileChangeHandler
+        completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
             return // no-op
@@ -463,7 +434,8 @@ extension AuthManager {
         
         authenticatedUser.updateEmail(to: newEmail) { (error) in
             guard let error = error else {
-                // ensure the user is refreshed
+                // sync the user's profile
+                // data from the server
                 authenticatedUser.reload() { (_) in
                     completion(.success(authenticatedUser))
                 }
@@ -489,7 +461,7 @@ extension AuthManager {
     public func updatePassword(
         to newPassword: String,
         passwordForReauthentication: String? = nil,
-        completion: @escaping ProfileChangeHandler
+        completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
             return // no-op
@@ -497,7 +469,8 @@ extension AuthManager {
         
         authenticatedUser.updatePassword(to: newPassword) { (error) in
             guard let error = error else {
-                // ensure the user is refreshed
+                // sync the user's profile
+                // data from the server
                 authenticatedUser.reload() { (_) in
                     completion(.success(authenticatedUser))
                 }
@@ -518,7 +491,7 @@ extension AuthManager {
     ///     - completion: The completion handler.
     public func unlinkFrom(
         providerID: IdentityProviderID,
-        completion: @escaping ProfileChangeHandler
+        completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
             return // no-op
@@ -531,7 +504,8 @@ extension AuthManager {
         } else {
             authenticatedUser.unlink(fromProvider: providerID.rawValue) { (user, error) in
                 guard let error = error else {
-                    // ensure the user is refreshed
+                    // sync the user's profile
+                    // data from the server
                     authenticatedUser.reload() { (_) in
                         completion(.success(authenticatedUser))
                     }
@@ -550,7 +524,7 @@ extension AuthManager {
     ///
     /// - Parameters:
     ///     - completion: The completion handler.
-    public func deleteAccount(with completion: @escaping ProfileChangeHandler) {
+    public func deleteAccount(with completion: @escaping ProfileChangeCompletionHandler) {
         guard case let .authenticated(authenticatedUser) = authState else {
             return // no-op
         }
@@ -580,22 +554,23 @@ extension AuthManager {
         }
     }
     
-    private func reauthenticate<P: IdentityProviding>(
+    private func enqueueAuthOperation<P: IdentityProviding>(
         with provider: P,
-        completion: @escaping AuthResultHandler
+        authenticationType: AuthType,
+        completion: @escaping AuthOperationCompletionHandler
     ) {
         authenticationQueue.addOperation(
-            AuthOperation(
+            AuthOperation<P>(
                 auth: auth,
                 provider: provider,
-                authenticationType: .reauthenticate
+                authenticationType: authenticationType
             ) { (result, error) in
                 guard let error = error else {
                     completion(.success(result!))
                     return
                 }
                 
-                let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: .reauthenticate)
+                let context = AuthenticationError.Context(providerID: provider.providerID, authenticationType: authenticationType)
                 self.handleAuthOperationError(error, context: context, provider: provider, completion: completion)
             }
         )
@@ -605,7 +580,7 @@ extension AuthManager {
         _ error: Error,
         context: AuthenticationError.Context,
         provider: P,
-        completion: @escaping AuthResultHandler
+        completion: @escaping AuthOperationCompletionHandler
     ) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.emailAlreadyInUse.rawValue, provider.providerID == .email {
@@ -678,7 +653,7 @@ extension AuthManager {
         _ error: Error,
         context: ProfileChangeError.Context,
         passwordForReauthentication: String? = nil,
-        completion: @escaping ProfileChangeHandler
+        completion: @escaping ProfileChangeCompletionHandler
     ) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.requiresRecentLogin.rawValue {

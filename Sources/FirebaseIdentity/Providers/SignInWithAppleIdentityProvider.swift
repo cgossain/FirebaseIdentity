@@ -80,7 +80,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     
     public func signUp(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         // the implementation of "sign up" is identical to "sign in"
         signIn(
@@ -91,7 +91,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     
     public func signIn(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         var appleIDDisplayName = ""
         if let fullName = appleIDCredential.fullName {
@@ -127,7 +127,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     
     public func reauthenticate(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)
@@ -143,7 +143,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     
     public func link(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         guard let currentUser = auth.currentUser else {
             completion(nil, nil)

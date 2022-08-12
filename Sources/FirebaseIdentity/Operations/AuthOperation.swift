@@ -33,7 +33,7 @@ final class AuthOperation<P: IdentityProviding>: Procedure {
     
     let authenticationType: AuthType
     
-    let completion: AuthManager.AuthDataResultCallback
+    let completion: IdentityProviderCompletionHandler
     
     
     // MARK: - Lifecycle
@@ -43,7 +43,7 @@ final class AuthOperation<P: IdentityProviding>: Procedure {
         auth: Auth,
         provider: P,
         authenticationType: AuthType,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     ) {
         self.auth = auth
         self.provider = provider

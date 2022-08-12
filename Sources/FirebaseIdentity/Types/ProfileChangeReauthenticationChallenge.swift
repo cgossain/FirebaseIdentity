@@ -36,7 +36,7 @@ public struct ProfileChangeReauthenticationChallenge {
     // MARK: - Internal
     
     /// A completion handler used internally.
-    let completion: AuthManager.ProfileChangeHandler
+    let completion: ProfileChangeCompletionHandler
 }
 
 extension ProfileChangeReauthenticationChallenge: Equatable {

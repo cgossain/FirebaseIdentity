@@ -34,24 +34,24 @@ public protocol IdentityProviding {
     /// Asks the identity provider to sign up, using the given Firebase auth object.
     func signUp(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     )
     
     /// Asks the identity provider to sign in, using the given Firebase auth object.
     func signIn(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     )
     
     /// Asks the identity provider to reauthenticate the currently signed in user, using the given Firebase auth object.
     func reauthenticate(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     )
     
     /// Asks the identity provider to add itself as a sign in method for the currently signed in user, using the given Firebase auth object.
     func link(
         using auth: Auth,
-        completion: @escaping AuthManager.AuthDataResultCallback
+        completion: @escaping IdentityProviderCompletionHandler
     )
 }
