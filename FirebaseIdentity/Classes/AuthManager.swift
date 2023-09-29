@@ -232,7 +232,7 @@ extension AuthManager {
     
     /// Enqueues a reauthentication operation.
     public func reauthenticate<P: IdentityProvider>(with provider: P, for challenge: ProfileChangeReauthenticationChallenge, completion: ReauthenticationHandler? = nil) {
-        self.reauthenticate(with: provider) { (result) in
+        reauthenticate(with: provider) { (result) in
             switch result {
             case .success(_):
                 self.lastReauthenticationDate = Date()
@@ -272,7 +272,7 @@ extension AuthManager {
     
     /// Requests a reauthentication to begin.
     public func requestReauthentication(passwordForReauthentication: String? = nil, completion: @escaping ReauthenticationRequestHandler) {
-        guard let authenticatedUser = authenticatedUser else {
+        guard let authenticatedUser else {
             return
         }
         

@@ -31,16 +31,16 @@ public protocol IdentityProvider {
     var providerID: IdentityProviderID { get }
     
     /// Starts the identity providers sign up routine.
-    func signUp(completion: @escaping AuthDataResultCallback)
+    func signUp(completion: @escaping ((AuthDataResult?, Error?) -> Void))
     
     /// Starts the identity providers sign in routine.
-    func signIn(completion: @escaping AuthDataResultCallback)
+    func signIn(completion: @escaping ((AuthDataResult?, Error?) -> Void))
     
     /// Reauthenticates the currently signed in user using the credentials specified by the receiver.
-    func reauthenticate(completion: @escaping AuthDataResultCallback)
+    func reauthenticate(completion: @escaping ((AuthDataResult?, Error?) -> Void))
     
     /// Links the currently signed in user with the credentials specified by the receiver.
-    func link(completion: @escaping AuthDataResultCallback)
+    func link(completion: @escaping ((AuthDataResult?, Error?) -> Void))
 }
 
 

@@ -26,6 +26,7 @@ import Foundation
 import FirebaseAuth
 
 public final class EmailIdentityProvider: IdentityProvider {
+    
     /// The identity provider ID of the receiver.
     public let providerID: IdentityProviderID
     
@@ -35,26 +36,26 @@ public final class EmailIdentityProvider: IdentityProvider {
     /// The password.
     public let password: String
     
+    // MARK: - Init
     
-    // MARK: - Lifecycle
     public init(email: String, password: String) {
         self.email = email
         self.password = password
         self.providerID = .email
     }
     
-    
     // MARK: - IdentityProvider
-    public func signUp(completion: @escaping AuthDataResultCallback) {
+    
+    public func signUp(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         Auth.auth().createUser(withEmail: email, password: password, completion: completion)
     }
     
-    public func signIn(completion: @escaping AuthDataResultCallback) {
+    public func signIn(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         let credential = EmailAuthProvider.credential(withEmail: email, password: password)
         Auth.auth().signIn(with: credential, completion: completion)
     }
     
-    public func reauthenticate(completion: @escaping AuthDataResultCallback) {
+    public func reauthenticate(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
             return
@@ -64,7 +65,7 @@ public final class EmailIdentityProvider: IdentityProvider {
         currentUser.reauthenticate(with: credential, completion: completion)
     }
     
-    public func link(completion: @escaping AuthDataResultCallback) {
+    public func link(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
             return

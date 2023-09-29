@@ -33,6 +33,7 @@ public enum SignInWithAppleIdentityProviderError: Error {
 
 @available(iOS 13.0, *)
 public final class SignInWithAppleIdentityProvider: IdentityProvider {
+    
     /// The identity provider ID of the receiver.
     public let providerID: IdentityProviderID
     
@@ -45,8 +46,8 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
     /// The JSON Web Token (JWT) serialized from the ASAuthorizationAppleIDCredential.
     public let identityToken: String
     
+    // MARK: - Init
     
-    // MARK: - Lifecycle
     /// Initializes a "Sign in with Apple" identity provider.
     ///
     /// - Throws: An SignInWithAppleIdentityProviderError error that explains why the initialization failed.
@@ -69,12 +70,13 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
     
     
     // MARK: - IdentityProvider
-    public func signUp(completion: @escaping AuthDataResultCallback) {
+    
+    public func signUp(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         // the implementation of "sign up" is identical to "sign in"
         self.signIn(completion: completion)
     }
     
-    public func signIn(completion: @escaping AuthDataResultCallback) {
+    public func signIn(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         let credential = OAuthProvider.credential(withProviderID: providerID.rawValue,
                                                   idToken: identityToken,
                                                   rawNonce: nonce)
@@ -111,7 +113,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
         }
     }
     
-    public func reauthenticate(completion: @escaping AuthDataResultCallback) {
+    public func reauthenticate(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
             return
@@ -124,7 +126,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
         currentUser.reauthenticate(with: credential, completion: completion)
     }
     
-    public func link(completion: @escaping AuthDataResultCallback) {
+    public func link(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         guard let currentUser = Auth.auth().currentUser else {
             completion(nil, nil)
             return

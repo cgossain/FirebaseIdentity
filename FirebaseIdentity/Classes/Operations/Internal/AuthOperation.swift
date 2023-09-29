@@ -28,19 +28,19 @@ import FirebaseAuth
 final class AuthOperation<P: IdentityProvider>: Procedure {
     let provider: P
     let authenticationType: AuthenticationType
-    let completion: AuthDataResultCallback
+    let completion: ((AuthDataResult?, Error?) -> Void)
     
+    // MARK: - Init
     
-    // MARK: - Lifecycle
-    init(provider: P, authenticationType: AuthenticationType, completion: @escaping AuthDataResultCallback) {
+    init(provider: P, authenticationType: AuthenticationType, completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
         self.provider = provider
         self.authenticationType = authenticationType
         self.completion = completion
         super.init()
     }
     
-    
     // MARK: - Procedure
+    
     override func execute() {
         switch authenticationType {
         case .signUp:

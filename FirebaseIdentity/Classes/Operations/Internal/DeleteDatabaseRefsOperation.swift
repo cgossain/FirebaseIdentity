@@ -28,26 +28,29 @@ import FirebaseDatabase
 
 /// An operation that deletes the data at the given database refs.
 final class DeleteDatabaseRefsOperation: Procedure {
+    
     /// The database refs to be deleted.
     let refs: [DatabaseReference]?
     
     /// A block called when the operation completes but just before the operation moves to the `finished` state.
     var deleteDatabaseRefsCompletionBlock: ((Error?) -> Void)?
     
+    // MARK: - Private
     
-    // MARK: - Private Properties
     private var queue: ProcedureQueue = {
         let queue = ProcedureQueue()
         queue.name = "com.firebaseIdentity.authManager.deleteDatabaseRefsProcedureQueue"
         return queue
     }()
     
+    // MARK: - Init
     
-    // MARK: - Lifecycle
     init(refs: [DatabaseReference]?) {
         self.refs = refs
         super.init()
     }
+    
+    // MARK: - Procedure
     
     override func execute() {
         var opError: Error?
@@ -82,18 +85,21 @@ final class DeleteDatabaseRefsOperation: Procedure {
 
 /// An operation that deletes the data at a given ref using a transaction block.
 private final class DeleteDatabaseRefOperation: Procedure {
+    
     /// The database refs to be deleted.
     let ref: DatabaseReference
     
     /// A block called when the operation completes but just before the operation moves to the `finished` state.
     var deleteDatabaseRefCompletionBlock: ((Error?) -> Void)?
     
+    // MARK: - Init
     
-    // MARK: - Lifecycle
     init(ref: DatabaseReference) {
         self.ref = ref
         super.init()
     }
+    
+    // MARK: - Procedure
     
     override func execute() {
         DispatchQueue.main.async {
