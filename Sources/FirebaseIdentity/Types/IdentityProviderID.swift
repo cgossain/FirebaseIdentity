@@ -1,7 +1,7 @@
 //
 //  IdentityProviderID.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,11 @@
 //  THE SOFTWARE.
 //
 
-import Foundation
 import FirebaseAuth
-
-extension IdentityProviderID: CaseIterable {
-    public static var allCases: [IdentityProviderID] {
-        return [.email, .signInWithApple, .facebook]
-    }
-    
-    /// The Firebase provider ID for email authentication.
-    public static let email = IdentityProviderID(rawValue: FirebaseAuth.EmailAuthProviderID)!
-    
-    /// The Firebase provider ID for Sign in with Apple authentication.
-    public static let signInWithApple = IdentityProviderID(rawValue: SignInWithAppleAuthProviderID)!
-    
-    /// The Firebase provider ID for Facebook authentication.
-    public static let facebook = IdentityProviderID(rawValue: FirebaseAuth.FacebookAuthProviderID)!
-}
+import Foundation
 
 public struct IdentityProviderID: RawRepresentable {
+    
     /// Initializes the type with a raw Firebase auth provider ID.
     public init?(rawValue: String) {
         if rawValue == FirebaseAuth.EmailAuthProviderID {
@@ -76,11 +62,13 @@ extension IdentityProviderID: CustomStringConvertible {
     }
 }
 
-extension IdentityProviderID: Equatable, Hashable {
+extension IdentityProviderID: Equatable {
     public static func ==(lhs: IdentityProviderID, rhs: IdentityProviderID) -> Bool {
         return lhs.rawValue == rhs.rawValue
     }
-    
+}
+
+extension IdentityProviderID: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(rawValue)
     }

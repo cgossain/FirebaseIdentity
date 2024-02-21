@@ -1,7 +1,7 @@
 //
 //  AuthenticationError.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,28 +24,26 @@
 
 import Foundation
 
-public enum AuthenticationType {
-    case signUp
-    case signIn
-    case reauthenticate
-    case linkProvider
-}
-
+/// The error thrown when authentication fails.
 public enum AuthenticationError: Error {
+    
     /// The context in which the error occurred.
     public struct Context {
         /// The identity provider that was used to authenticate.
         public let providerID: IdentityProviderID
         
         /// The type of authentication that was attempted.
-        public let authenticationType: AuthenticationType
+        public let authenticationType: AuthType
         
         /// Creates a new context with the given identity provider and authentication type.
         ///
         /// - parameters:
         ///     - providerID: The identity provider that was used to authenticate.
         ///     - authenticationType: The type of authentication that was attempted.
-        public init(providerID: IdentityProviderID, authenticationType: AuthenticationType) {
+        public init(
+            providerID: IdentityProviderID,
+            authenticationType: AuthType
+        ) {
             self.providerID = providerID
             self.authenticationType = authenticationType
         }

@@ -1,7 +1,7 @@
 //
-//  SignInWithAppleIdentityProviderError.swift
+//  SignInWithAppleIdentityProvider.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,19 @@
 //  THE SOFTWARE.
 //
 
-import Foundation
 import AuthenticationServices
 import FirebaseAuth
+import Foundation
 
+/// The error thrown when authentication with the Sign in with Apple identity provider fails.
 public enum SignInWithAppleIdentityProviderError: Error {
     case unableToFetchIdentityToken
     case unableToSerializeIdentityToken
 }
 
+/// The Sign in with Apple identity provider.
 @available(iOS 13.0, *)
-public final class SignInWithAppleIdentityProvider: IdentityProvider {
+public final class SignInWithAppleIdentityProvider: IdentityProviding {
     
     /// The identity provider ID of the receiver.
     public let providerID: IdentityProviderID
@@ -50,8 +52,14 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
     
     /// Initializes a "Sign in with Apple" identity provider.
     ///
-    /// - Throws: An SignInWithAppleIdentityProviderError error that explains why the initialization failed.
-    public init(appleIDCredential: ASAuthorizationAppleIDCredential, nonce: String?) throws {
+    /// - Parameters:
+    ///     - appleIDCredential: The credential returned by the AuthenticationServices framework.
+    ///     - nonce: The nonce.
+    /// - Throws: A SignInWithAppleIdentityProviderError error that explains why the initialization failed.
+    public init(
+        appleIDCredential: ASAuthorizationAppleIDCredential,
+        nonce: String?
+    ) throws {
         guard let appleIDToken = appleIDCredential.identityToken else {
             print("Unable to fetch identity token")
             throw SignInWithAppleIdentityProviderError.unableToFetchIdentityToken
@@ -62,25 +70,29 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
             throw SignInWithAppleIdentityProviderError.unableToSerializeIdentityToken
         }
         
-        self.identityToken = idTokenString
+        self.providerID = .signInWithApple
         self.appleIDCredential = appleIDCredential
         self.nonce = nonce
-        self.providerID = .signInWithApple
+        self.identityToken = idTokenString
     }
     
+    // MARK: - IdentityProviding
     
-    // MARK: - IdentityProvider
-    
-    public func signUp(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
+    public func signUp(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
         // the implementation of "sign up" is identical to "sign in"
-        self.signIn(completion: completion)
+        signIn(
+            using: auth,
+            completion: completion
+        )
     }
     
-    public func signIn(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        let credential = OAuthProvider.credential(withProviderID: providerID.rawValue,
-                                                  idToken: identityToken,
-                                                  rawNonce: nonce)
-        
+    public func signIn(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
         var appleIDDisplayName = ""
         if let fullName = appleIDCredential.fullName {
             let formatter = PersonNameComponentsFormatter()
@@ -88,7 +100,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
             appleIDDisplayName = displayName
         }
         
-        Auth.auth().signIn(with: credential) { (result, error) in
+        auth.signIn(with: credential) { (result, error) in
             if let error = error {
                 completion(result, error)
             }
@@ -113,29 +125,46 @@ public final class SignInWithAppleIdentityProvider: IdentityProvider {
         }
     }
     
-    public func reauthenticate(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        guard let currentUser = Auth.auth().currentUser else {
+    public func reauthenticate(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return
         }
         
-        let credential = OAuthProvider.credential(withProviderID: providerID.rawValue,
-                                                  idToken: identityToken,
-                                                  rawNonce: nonce)
-        
-        currentUser.reauthenticate(with: credential, completion: completion)
+        currentUser
+            .reauthenticate(
+                with: credential,
+                completion: completion
+            )
     }
     
-    public func link(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        guard let currentUser = Auth.auth().currentUser else {
+    public func link(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return
         }
         
-        let credential = OAuthProvider.credential(withProviderID: providerID.rawValue,
-                                                  idToken: identityToken,
-                                                  rawNonce: nonce)
-        
-        currentUser.link(with: credential, completion: completion)
+        currentUser
+            .link(
+                with: credential,
+                completion: completion
+            )
+    }
+    
+    // MARK: - Private
+    
+    private var credential: OAuthCredential {
+        OAuthProvider
+            .credential(
+                withProviderID: providerID.rawValue,
+                idToken: identityToken,
+                rawNonce: nonce
+            )
     }
 }

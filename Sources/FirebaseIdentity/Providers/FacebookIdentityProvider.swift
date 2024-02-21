@@ -1,7 +1,7 @@
 //
 //  FacebookIdentityProvider.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,13 @@
 //  THE SOFTWARE.
 //
 
-import Foundation
 import FirebaseAuth
+import Foundation
 
-public final class FaceboookIdentityProvider: IdentityProvider {
+/// The Facebook identity provider.
+public final class FaceboookIdentityProvider: IdentityProviding {
     
-    /// The identity provider ID of the receiver.
+    /// The identity provider ID.
     public let providerID: IdentityProviderID
     
     /// The facebook access token.
@@ -35,40 +36,69 @@ public final class FaceboookIdentityProvider: IdentityProvider {
     
     // MARK: - Init
     
+    /// Initializer.
     public init(accessToken: String) {
         self.providerID = .facebook
         self.accessToken = accessToken
     }
     
-    // MARK: - IdentityProvider
+    // MARK: - IdentityProviding
     
-    public func signUp(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        Auth.auth().signIn(with: credential, completion: completion)
+    public func signUp(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        auth.signIn(
+            with: credential,
+            completion: completion
+        )
     }
     
-    public func signIn(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        Auth.auth().signIn(with: credential, completion: completion)
+    public func signIn(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        auth.signIn(
+            with: credential,
+            completion: completion
+        )
     }
     
-    public func reauthenticate(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        guard let currentUser = Auth.auth().currentUser else {
+    public func reauthenticate(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return
         }
         
-        let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        currentUser.reauthenticate(with: credential, completion: completion)
+        currentUser
+            .reauthenticate(
+                with: credential,
+                completion: completion
+            )
     }
     
-    public func link(completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
-        guard let currentUser = Auth.auth().currentUser else {
+    public func link(
+        using auth: Auth,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        guard let currentUser = auth.currentUser else {
             completion(nil, nil)
             return
         }
         
-        let credential = FacebookAuthProvider.credential(withAccessToken: accessToken)
-        currentUser.link(with: credential, completion: completion)
+        currentUser
+            .link(
+                with: credential,
+                completion: completion
+            )
+    }
+    
+    // MARK: - Private
+    
+    private var credential: AuthCredential {
+        FacebookAuthProvider.credential(withAccessToken: accessToken)
     }
 }

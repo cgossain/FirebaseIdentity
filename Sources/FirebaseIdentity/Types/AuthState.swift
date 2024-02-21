@@ -1,7 +1,7 @@
 //
-//  IdentityProviderUserInfo.swift
+//  AuthState.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,27 @@
 //  THE SOFTWARE.
 //
 
+import FirebaseAuth
 import Foundation
 
-public struct IdentityProviderUserInfo {
-    /// The identity provider ID of the receiver.
-    public let providerID: IdentityProviderID
-    
-    /// The email address.
-    public let email: String?
-    
-    /// The display name.
-    public let displayName: String?
+/// The authenticaion state.
+public enum AuthState {
+    case notDetermined
+    case notAuthenticated
+    case authenticated(User)
+}
+
+extension AuthState: Equatable {
+    public static func == (lhs: AuthState, rhs: AuthState) -> Bool {
+        switch (lhs, rhs) {
+        case (.notDetermined, .notDetermined):
+            return true
+        case (.notAuthenticated, .notAuthenticated):
+            return true
+        case (.authenticated, .authenticated):
+            return true
+        default:
+            return false
+        }
+    }
 }

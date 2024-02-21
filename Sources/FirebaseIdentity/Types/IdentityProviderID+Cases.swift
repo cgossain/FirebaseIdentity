@@ -1,7 +1,7 @@
 //
-//  DeleteUserAccountOperation.swift
+//  IdentityProviderID+Cases.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,26 +22,27 @@
 //  THE SOFTWARE.
 //
 
-import Foundation
-import ProcedureKit
 import FirebaseAuth
+import Foundation
 
-/// An operation that delete the currently authenticated Firebase user.
-final class DeleteUserAccountOperation: Procedure {
-    /// A block called when the operation completes but just before the operation moves to the `finished` state.
-    var deleteFirebaseUserCompletionBlock: AuthManager.ProfileChangeHandler?
+extension IdentityProviderID {
     
+    /// The Firebase provider ID for email authentication.
+    public static let email = IdentityProviderID(rawValue: FirebaseAuth.EmailAuthProviderID)!
     
-    // MARK: - Lifecycle
-    override func execute() {
-        DispatchQueue.main.async {
-            // using this internal method on the singleton instance (as opossed to directly
-            // using -deleteAccount on the firebase user) has the benefit of tying into the
-            // AuthManager's error handling mechanism
-            AuthManager.shared.deleteAccount { (result) in
-                self.deleteFirebaseUserCompletionBlock?(result)
-                self.finish()
-            }
-        }
+    /// The Firebase provider ID for Sign in with Apple authentication.
+    public static let signInWithApple = IdentityProviderID(rawValue: SignInWithAppleAuthProviderID)!
+    
+    /// The Firebase provider ID for Facebook authentication.
+    public static let facebook = IdentityProviderID(rawValue: FirebaseAuth.FacebookAuthProviderID)!
+}
+
+extension IdentityProviderID: CaseIterable {
+    public static var allCases: [IdentityProviderID] {
+        return [
+            .email,
+            .signInWithApple,
+            .facebook
+        ]
     }
 }
