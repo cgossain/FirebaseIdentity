@@ -1,7 +1,7 @@
 //
 //  ProfileChangeError.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,12 @@
 //  THE SOFTWARE.
 //
 
-import Foundation
 import FirebaseAuth
+import Foundation
 
+/// The error thrown when a profile change fails.
 public enum ProfileChangeError: Error {
+    
     /// The context in which the error occurred.
     public struct Context {
         public enum ProfileChangeType {
@@ -64,7 +66,10 @@ public enum ProfileChangeError: Error {
         /// - parameters:
         ///     - authenticatedUser: The Firebase user on which the profile update was attempted (this should be the currently authenticated user)
         ///     - profileChangeType: The type of profile change that was attempted.
-        public init(authenticatedUser: User, profileChangeType: ProfileChangeType) {
+        public init(
+            authenticatedUser: User,
+            profileChangeType: ProfileChangeType
+        ) {
             self.authenticatedUser = authenticatedUser
             self.profileChangeType = profileChangeType
         }

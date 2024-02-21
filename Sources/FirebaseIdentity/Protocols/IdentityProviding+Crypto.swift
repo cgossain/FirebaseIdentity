@@ -1,7 +1,7 @@
 //
-//  IdentityProvider.swift
+//  IdentityProviding+Crypto.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,12 @@
 //  THE SOFTWARE.
 //
 
-import Foundation
-import FirebaseAuth
 import CryptoKit
-
-public protocol IdentityProvider {
-    /// The identity provider ID of the receiver.
-    var providerID: IdentityProviderID { get }
-    
-    /// Starts the identity providers sign up routine.
-    func signUp(completion: @escaping ((AuthDataResult?, Error?) -> Void))
-    
-    /// Starts the identity providers sign in routine.
-    func signIn(completion: @escaping ((AuthDataResult?, Error?) -> Void))
-    
-    /// Reauthenticates the currently signed in user using the credentials specified by the receiver.
-    func reauthenticate(completion: @escaping ((AuthDataResult?, Error?) -> Void))
-    
-    /// Links the currently signed in user with the credentials specified by the receiver.
-    func link(completion: @escaping ((AuthDataResult?, Error?) -> Void))
-}
-
+import Foundation
 
 @available(iOS 13.0, *)
-extension IdentityProvider {
+extension IdentityProviding {
+    
     /// Generates and returns a hashed version of the input string using the SHA256 algorithm.
     static public func sha256(_ input: String) -> String {
       let inputData = Data(input.utf8)

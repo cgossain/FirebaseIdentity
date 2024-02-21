@@ -1,7 +1,7 @@
 //
-//  RequestReauthenticationOperation.swift
+//  AuthManager+Notification.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -23,27 +23,8 @@
 //
 
 import Foundation
-import ProcedureKit
 
-/// An operation that requests reauthentication via the `FirebaseIdentity.AuthManager` shared instance.
-final class RequestReauthenticationOperation: Procedure {
-    /// A block called when the operation completes but just before the operation moves to the `finished` state.
-    var requestReauthenticationCompletionBlock: ((ProfileChangeError?) -> Void)?
-    
-    
-    // MARK: - Lifecycle
-    override func execute() {
-        DispatchQueue.main.async {
-            AuthManager.shared.requestReauthentication { (status) in
-                switch status {
-                case .success, .unnecessary:
-                    self.requestReauthenticationCompletionBlock?(nil)
-                case .failure(let error):
-                    self.requestReauthenticationCompletionBlock?(error)
-                }
-                
-                self.finish()
-            }
-        }
-    }
+extension Notification.Name {
+    /// Posted on the main queue when the authentication state changes on a FirebaseIdentity.AuthManager instance.
+    public static let authenticationStateChanged = Notification.Name("com.firebaseidentity.authmanager.notification.authenticationstatechanged")
 }

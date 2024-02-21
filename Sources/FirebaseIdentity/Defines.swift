@@ -1,7 +1,7 @@
 //
-//  ProfileChangeReauthenticationChallenge.swift
+//  Defines.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,27 +24,25 @@
 
 import Foundation
 
-/// An object that provides context about the profile change that triggered the reauthentication challenge.
-public struct ProfileChangeReauthenticationChallenge {
-    // MARK: - Public Properties
-    /// A unique identifier for the challenge.
-    public let uuid = UUID().uuidString
-    
-    /// The profile change context information allows the action that triggered reauthentication to be retried automatically if needed.
-    public let context: ProfileChangeError.Context
-    
-    
-    // MARK: - Internal Properties
-    /// Interal use completion handler.
-    let completion: AuthManager.ProfileChangeHandler
+// MARK: - Identity Providers
+
+/// A string constant identifying the Sign in with Apple identity provider within the FirebaseAuth library.
+///
+/// - Note: This constant is not defined in the FirebaseAuth library so we're defining it here.
+public let SignInWithAppleAuthProviderID = "apple.com"
+
+// MARK: - Bundle
+
+extension Bundle {
+    /// Returns the bundle object for the library.
+    static var lib: Bundle {
+        return Bundle(for: AuthManager.self)
+    }
 }
 
-extension ProfileChangeReauthenticationChallenge: Equatable, Hashable {
-    public static func == (lhs: ProfileChangeReauthenticationChallenge, rhs: ProfileChangeReauthenticationChallenge) -> Bool {
-        return lhs.uuid == rhs.uuid
-    }
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(uuid)
-    }
+// MARK: - i18n
+
+/// Returns a localized string using the library's bundle if one is not specified.
+func LocalizedString(_ key: String, tableName: String? = nil, bundle: Bundle = .lib, value: String = "", comment: String) -> String {
+    return NSLocalizedString(key, tableName: tableName, bundle: bundle, value: value, comment: comment)
 }

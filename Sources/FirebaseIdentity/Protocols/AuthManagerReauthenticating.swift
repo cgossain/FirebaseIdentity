@@ -1,7 +1,7 @@
 //
 //  AuthManagerReauthenticating.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,9 @@
 
 import Foundation
 
-/// A protocol for an object that is capable of reauthenticating an AuthManager.
+/// A type that capable of reauthenticating an AuthManager instance.
 public protocol AuthManagerReauthenticating: AnyObject {
+    
     /// Called when an action triggers the `requiresRecentLogin` from Firebase.
     ///
     /// - Parameters:
@@ -34,5 +35,5 @@ public protocol AuthManagerReauthenticating: AnyObject {
     ///                  first item in the list can automatically be used for reauthentication. The providers are pre-sorted according to the priority order specified in
     ///                  the `providerReauthenticationPriority` property of the AuthManager.
     ///     - challenge: An object that must be passed to the auth manager's `reauthenticate` method. This is required to continue/retry the action that triggered the `requiresRecentLogin` error.
-    func authManager(_ manager: AuthManager, reauthenticateUsing providers: [IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
+    func authManager(_ manager: AuthManager, reauthenticateUsing providers: [AuthManager.IdentityProviderUserInfo], challenge: ProfileChangeReauthenticationChallenge)
 }

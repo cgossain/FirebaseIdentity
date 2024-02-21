@@ -1,7 +1,7 @@
 //
 //  AuthOperation.swift
 //
-//  Copyright (c) 2019-2021 Christian Gossain
+//  Copyright (c) 2024 Christian Gossain
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,17 +22,29 @@
 //  THE SOFTWARE.
 //
 
-import ProcedureKit
 import FirebaseAuth
+import ProcedureKit
 
-final class AuthOperation<P: IdentityProvider>: Procedure {
+final class AuthOperation<P: IdentityProviding>: Procedure {
+    
+    let auth: Auth
+    
     let provider: P
-    let authenticationType: AuthenticationType
+    
+    let authenticationType: AuthType
+    
     let completion: ((AuthDataResult?, Error?) -> Void)
     
     // MARK: - Init
     
-    init(provider: P, authenticationType: AuthenticationType, completion: @escaping ((AuthDataResult?, Error?) -> Void)) {
+    /// Initializer.
+    init(
+        auth: Auth,
+        provider: P,
+        authenticationType: AuthType,
+        completion: @escaping ((AuthDataResult?, Error?) -> Void)
+    ) {
+        self.auth = auth
         self.provider = provider
         self.authenticationType = authenticationType
         self.completion = completion
@@ -44,25 +56,25 @@ final class AuthOperation<P: IdentityProvider>: Procedure {
     override func execute() {
         switch authenticationType {
         case .signUp:
-            provider.signUp { [unowned self] (result, error) in
+            provider.signUp(using: auth) { [unowned self] (result, error) in
                 self.completion(result, error)
                 self.finish()
             }
             
         case .signIn:
-            provider.signIn { (result, error) in
+            provider.signIn(using: auth) { (result, error) in
                 self.completion(result, error)
                 self.finish()
             }
             
         case .reauthenticate:
-            provider.reauthenticate { (result, error) in
+            provider.reauthenticate(using: auth) { (result, error) in
                 self.completion(result, error)
                 self.finish()
             }
             
-        case .linkProvider:
-            provider.link { (result, error) in
+        case .link:
+            provider.link(using: auth) { (result, error) in
                 self.completion(result, error)
                 self.finish()
             }
