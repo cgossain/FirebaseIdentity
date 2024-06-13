@@ -93,20 +93,20 @@ public enum AuthenticationError: Error {
 extension AuthenticationError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .requiresAccountLinking(_, _):
+        case .requiresAccountLinking:
             let msg = LocalizedString("Account linking required.", comment: "auth error description")
             return msg
-        case .invalidEmailOrPassword(_):
+        case .invalidEmailOrPassword:
             let msg = LocalizedString("Invalid email or password.", comment: "auth error description")
             return msg
-        case .emailBasedAccountAlreadyExists(_):
+        case .emailBasedAccountAlreadyExists:
             let msg = LocalizedString("The email entered is already associated with an account. Please try a different email.", comment: "auth error description")
             return msg
-        case .providerAlreadyLinked(_):
+        case .providerAlreadyLinked:
             let msg = LocalizedString("A user can only be linked to one identity for the given provider.", comment: "auth error description")
             return msg
-        case .other(let message, _):
-            let msg = "\(message)"
+        case .other(let msg, _):
+            let msg = "\(msg)"
             return msg
         }
     }

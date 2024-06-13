@@ -61,8 +61,7 @@ public final class AuthManager {
     
     /// The reauthentication result.
     public enum ReauthenticationResult {
-        case notNeeded
-        case success
+        case authenticated(User)
         case failure(ProfileChangeError)
     }
     
@@ -157,7 +156,7 @@ public final class AuthManager {
     /// - Note: Defaults to `email` as the first provider.
     public var linkedProvidersPriority: [IdentityProviderID] = IdentityProviderID.allCases.sorted { (lhs, rhs) -> Bool in return lhs == .email }
     
-    // MARK: - Lifecycle
+    // MARK: - Init
     
     /// Initializer.
     public init(auth: Auth) {
@@ -165,61 +164,7 @@ public final class AuthManager {
         addSubscriptions()
     }
     
-    // MARK: - Private
-    
-    /// Returns the metadata of the linked email identity provider; otherwise `nil` if
-    /// an email provider is not linked to the current user.
-    private var linkedEmailProviderUserInfo: IdentityProviderUserInfo? { return self.linkedProviders.filter({ $0.providerID == .email }).first }
-    
-    /// Indicates if reauthentication will be required to perform a profile change.
-    ///
-    /// You can use this property to preemptively reauthenticate before performing a profile change.
-    ///
-    /// Currently, this method checks if it's been more than 5 miunutes since the last authentication (which is the currently documented reauthentication requirement on the Firebase side).
-    private var needsReauthenticationForProfileChanges: Bool {
-        guard let lastAuthenticationDate = lastAuthenticationDate else {
-            return false
-        }
-        
-        let components = Calendar.current
-            .dateComponents([
-                .minute
-            ], from: lastAuthenticationDate, to: Date())
-        
-        guard let minute = components.minute else {
-            return false
-        }
-        
-        return minute >= 5
-    }
-    
-    /// The last reauthentication date of the currently signed in user.
-    private var lastReauthenticationDate: Date? {
-        get {
-            UserDefaults.standard
-                .value(forKey: "com.firebaseidentity.authmanager.lastReauthenticationDate") as? Date
-        }
-        set {
-            UserDefaults.standard
-                .set(newValue, forKey: "com.firebaseidentity.authmanager.lastReauthenticationDate")
-        }
-    }
-    
-    /// An internal operation queue for authentication operations (i.e., sign-up, sign-in, reauthentication, etc.,).
-    ///
-    /// The primary reason for using operations for authentication flows is that it provides a way to
-    /// maintain a strong reference to the identity provider while the authentication flow is in
-    /// progress. An additional benefit is that a serial queue allows us to run tasks in the
-    /// same order they are submitted.
-    private var authenticationQueue: ProcedureQueue = {
-        let queue = ProcedureQueue()
-        queue.name = "com.firebaseidentity.authmanager.authenticationQueue"
-        queue.maxConcurrentOperationCount = 1
-        return queue
-    }()
-}
-
-extension AuthManager {
+    // MARK: - API
     
     /// Enqueues a sign up auth operation.
     public func signUp<P: IdentityProviding>(
@@ -262,15 +207,15 @@ extension AuthManager {
     /// After a successful reauthentication, this method will retry the previously attempted operation contained in the challenge object.
     public func reauthenticate<P: IdentityProviding>(
         with provider: P,
-        for challenge: ProfileChangeReauthenticationChallenge,
+        challenge: ProfileChangeReauthenticationChallenge,
         completion: AuthOperationCompletionHandler? = nil
     ) {
         enqueueAuthOperation(
             with: provider,
             authenticationType: .reauthenticate
-        ) { (result) in
+        ) { result in
             switch result {
-            case .success(_):
+            case .success:
                 self.lastReauthenticationDate = Date()
                 
                 // retry the profile change attempt that
@@ -323,11 +268,12 @@ extension AuthManager {
         completion: @escaping ReauthenticationRequestHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
-            return // no-op
+            // no-op
+            return
         }
         
         if !needsReauthenticationForProfileChanges {
-            completion(.notNeeded)
+            completion(.authenticated(authenticatedUser))
             return
         }
         
@@ -336,8 +282,8 @@ extension AuthManager {
            let email = linkedEmailProviderUserInfo?.email {
             let challenge = ProfileChangeReauthenticationChallenge(context: context) { (result) in
                 switch result {
-                case .success(_):
-                    completion(.success)
+                case .success(let user):
+                    completion(.authenticated(user))
                 case .failure(let error):
                     completion(.failure(error))
                 }
@@ -346,14 +292,14 @@ extension AuthManager {
             // attempt silently reauthenticating via the linked email provider
             // using the provided password
             let provider = EmailIdentityProvider(email: email, password: passwordForReauthentication)
-            reauthenticate(with: provider, for: challenge)
+            reauthenticate(with: provider, challenge: challenge)
         } else if let reauthenticator = reauthenticator {
             // 1. notify the delegate that we need to reauthenticate
             // 2. after a successful reauthentication, we need to continue the profile change and eventually call the completion handler
             let challenge = ProfileChangeReauthenticationChallenge(context: context) { (result) in
                 switch result {
-                case .success(_):
-                    completion(.success)
+                case .success(let user):
+                    completion(.authenticated(user))
                 case .failure(let error):
                     completion(.failure(error))
                 }
@@ -368,9 +314,6 @@ extension AuthManager {
     public func signOut() {
         try? auth.signOut()
     }
-}
-
-extension AuthManager {
     
     /// Updates the display name of the currently signed in user.
     ///
@@ -389,7 +332,8 @@ extension AuthManager {
         completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
-            return // no-op
+            // no-op
+            return
         }
         
         let profileChangeRequest = authenticatedUser.createProfileChangeRequest()
@@ -426,7 +370,8 @@ extension AuthManager {
         completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
-            return // no-op
+            // no-op
+            return
         }
         
         authenticatedUser.updateEmail(to: newEmail) { (error) in
@@ -461,7 +406,8 @@ extension AuthManager {
         completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
-            return // no-op
+            // no-op
+            return
         }
         
         authenticatedUser.updatePassword(to: newPassword) { (error) in
@@ -491,7 +437,8 @@ extension AuthManager {
         completion: @escaping ProfileChangeCompletionHandler
     ) {
         guard case let .authenticated(authenticatedUser) = authState else {
-            return // no-op
+            // no-op
+            return
         }
         
         // first validate that the user will still have other sign-in options available if the unlinking is allowed to continue
@@ -523,7 +470,8 @@ extension AuthManager {
     ///     - completion: The completion handler.
     public func deleteAccount(with completion: @escaping ProfileChangeCompletionHandler) {
         guard case let .authenticated(authenticatedUser) = authState else {
-            return // no-op
+            // no-op
+            return
         }
         
         authenticatedUser.delete { [unowned self] (error) in
@@ -536,13 +484,12 @@ extension AuthManager {
             self.handleProfileChangeError(error, context: context, completion: completion)
         }
     }
-}
-
-extension AuthManager {
+    
+    // MARK: - Helpers
     
     private func addSubscriptions() {
         auth.addStateDidChangeListener { (auth, user) in
-            if let user = user {
+            if let user {
                 self.authState = .authenticated(user)
             } else {
                 self.authState = .notAuthenticated
@@ -592,8 +539,7 @@ extension AuthManager {
                     // get all providers that are not the one that the user just tried authenticating with
                     if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
                         completion(.failure(.requiresAccountLinking(providers, context)))
-                    }
-                    else {
+                    } else {
                         completion(.failure(.emailBasedAccountAlreadyExists(context)))
                     }
                 }
@@ -615,8 +561,7 @@ extension AuthManager {
                     if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }), !providers.contains(.email) {
                         let nonEmailProviders = providers.filter({ $0 != provider.providerID })
                         completion(.failure(.requiresAccountLinking(nonEmailProviders, context)))
-                    }
-                    else {
+                    } else {
                         completion(.failure(.invalidEmailOrPassword(context)))
                     }
                 }
@@ -629,8 +574,7 @@ extension AuthManager {
                     // get all providers that are not the one that the user just tried authenticating with
                     if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
                         completion(.failure(.requiresAccountLinking(providers, context)))
-                    }
-                    else {
+                    } else {
                         let msg = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
                         completion(.failure(.other(msg, context)))
                     }
@@ -662,8 +606,8 @@ extension AuthManager {
                     // attempt silently reauthenticating via the linked email provider
                     // using the provided password
                     let provider = EmailIdentityProvider(email: email, password: passwordForReauthentication)
-                    reauthenticate(with: provider, for: challenge)
-                } else if let reauthenticator = reauthenticator {
+                    reauthenticate(with: provider, challenge: challenge)
+                } else if let reauthenticator {
                     // 1. notify the delegate that we need to reauthenticate
                     // 2. after a successful reauthentication, we need to continue the profile change and eventually call the completion handler
                     let challenge = ProfileChangeReauthenticationChallenge(context: context, completion: completion)
@@ -682,4 +626,58 @@ extension AuthManager {
             completion(.success(authenticatedUser))
         }
     }
+    
+    // MARK: - Private
+    
+    /// Returns the metadata of the linked email identity provider; otherwise `nil` if
+    /// an email provider is not linked to the current user.
+    private var linkedEmailProviderUserInfo: IdentityProviderUserInfo? { linkedProviders.filter({ $0.providerID == .email }).first }
+    
+    /// Indicates if reauthentication will be required to perform a profile change.
+    ///
+    /// You can use this property to preemptively reauthenticate before performing a profile change.
+    ///
+    /// Currently, this method checks if it's been more than 5 miunutes since the last authentication (which is the currently documented reauthentication requirement on the Firebase side).
+    private var needsReauthenticationForProfileChanges: Bool {
+        guard let lastAuthenticationDate else {
+            return false
+        }
+        
+        let components = Calendar
+            .current
+            .dateComponents([.minute], from: lastAuthenticationDate, to: Date())
+        
+        guard let minute = components.minute else {
+            return false
+        }
+        
+        return minute >= 5
+    }
+    
+    /// The last reauthentication date of the currently signed in user.
+    private var lastReauthenticationDate: Date? {
+        get {
+            UserDefaults
+                .standard
+                .value(forKey: "com.firebaseidentity.authmanager.lastreauthenticationdate") as? Date
+        }
+        set {
+            UserDefaults
+                .standard
+                .set(newValue, forKey: "com.firebaseidentity.authmanager.lastreauthenticationdate")
+        }
+    }
+    
+    /// An internal operation queue for authentication operations (i.e., sign-up, sign-in, reauthentication, etc.,).
+    ///
+    /// The primary reason for using operations for authentication flows is that it provides a way to
+    /// maintain a strong reference to the identity provider while the authentication flow is in
+    /// progress. An additional benefit is that a serial queue allows us to run tasks in the
+    /// same order they are submitted.
+    private var authenticationQueue: ProcedureQueue = {
+        let queue = ProcedureQueue()
+        queue.name = "com.firebaseidentity.authmanager.authenticationqueue"
+        queue.maxConcurrentOperationCount = 1
+        return queue
+    }()
 }

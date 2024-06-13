@@ -30,6 +30,14 @@ public enum AuthState {
     case notDetermined
     case notAuthenticated
     case authenticated(User)
+    
+    /// The authenticated user, otherwise nil.
+    public var authenticatedUser: User? {
+        guard case let .authenticated(authenticatedUser) = self else {
+            return nil
+        }
+        return authenticatedUser
+    }
 }
 
 extension AuthState: Equatable {
@@ -39,8 +47,8 @@ extension AuthState: Equatable {
             return true
         case (.notAuthenticated, .notAuthenticated):
             return true
-        case (.authenticated, .authenticated):
-            return true
+        case (.authenticated(let lhsUser), .authenticated(let rhsUser)):
+            return lhsUser.uid == rhsUser.uid
         default:
             return false
         }
