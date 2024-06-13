@@ -1,16 +1,32 @@
 //
 //  AppDelegate.swift
-//  FirebaseIdentity
 //
-//  Created by cgossain on 02/24/2019.
-//  Copyright (c) 2019 cgossain. All rights reserved.
+//  Copyright (c) 2024 Christian Gossain
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//  THE SOFTWARE.
 //
 
-import UIKit
 import AppController
 import FBSDKCoreKit
 import Firebase
 import FirebaseIdentity
+import UIKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -24,37 +40,43 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     
     private var authenticationStateObserver: Any?
     
-    
     // MARK: - UIApplicationDelegate
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        let aWindow = UIWindow()
-        self.window = aWindow
-        
-        appController.installRootViewController(in: aWindow)
+        // facebook
+        ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
         
         // firebase
         FirebaseApp.configure()
         
-        // facebook
-        ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
-        
-        // author
-        AuthManager.configure()
+        // access default instance just to initialize the subscriptions
+        // this wouldn't be an issue if using dependency injection
+        print(AuthManager.default.authState)
         
         // observer auth state
         authenticationStateObserver =
-            NotificationCenter.default.addObserver(forName: AuthManager.authenticationStateChangedNotification, object: nil, queue: .main, using: { (note) in
-                guard let manager = note.object as? AuthManager else {
-                    return
+        NotificationCenter
+            .default
+            .addObserver(
+                forName: .authenticationStateChanged, object: nil, queue: .main, using: { (note) in
+                    guard let manager = note.object as? AuthManager else {
+                        return
+                    }
+                    
+                    switch manager.authState {
+                    case .notDetermined:
+                        break
+                    case .notAuthenticated:
+                        AppController.logout()
+                    case .authenticated:
+                        AppController.login()
+                    }
                 }
-                
-                switch manager.authenticationState {
-                case .authenticated:
-                    AppController.login()
-                case .notDetermined, .notAuthenticated:
-                    AppController.logout()
-                }
-            })
+            )
+        
+        let aWindow = UIWindow()
+        self.window = aWindow
+        appController.installRootViewController(in: aWindow)
         
         return true
     }
@@ -90,23 +112,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
-    
 }
 
 extension AppDelegate: AppControllerInterfaceProviding {
     func configuration(for appController: AppController, traitCollection: UITraitCollection) -> AppController.Configuration {
-        return AppController.Configuration()
+        AppController.Configuration()
     }
     
     func loggedOutInterfaceViewController(for appController: AppController) -> UIViewController {
-        return SignedOutViewController()
+        SignedOutViewController()
     }
     
     func loggedInInterfaceViewController(for appController: AppController) -> UIViewController {
-        return SignedInViewController()
+        SignedInViewController()
     }
     
     func isInitiallyLoggedIn(for appController: AppController) -> Bool {
-        return false
+        false
     }
 }
