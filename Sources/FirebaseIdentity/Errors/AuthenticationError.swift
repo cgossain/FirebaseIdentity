@@ -57,9 +57,9 @@ public enum AuthenticationError: Error {
     /// This case can be handled by signing into the existing account using one of the auth providers specified by this
     /// error and then linking the attempted credentials (available in the identity provider in the error context)
     ///
-    /// As associated values, this case contains the list of available auth providers associated with
-    /// the existing account and context for debugging.
-    case requiresAccountLinking([IdentityProviderID], AuthenticationError.Context)
+    /// As associated values, this case contains the existing email, the list of identity providers associated
+    /// with the existing account, and context for debugging.
+    case requiresAccountLinking(String, [IdentityProviderID], AuthenticationError.Context)
     
     /// Can be trigged by Firebase errors 17009, 17011
     ///
@@ -79,7 +79,6 @@ public enum AuthenticationError: Error {
     /// Can be trigged by Firebase error 17015
     ///
     /// An indication that an attempt was made to link a provider that is already linked to another account.
-    /// UserInfo:?
     ///
     /// As an associated value, this case contains the context for debugging.
     case providerAlreadyLinked(AuthenticationError.Context)

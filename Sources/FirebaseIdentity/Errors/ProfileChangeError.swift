@@ -121,10 +121,10 @@ public enum ProfileChangeError: Error {
 extension ProfileChangeError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .requiresRecentSignIn(_):
+        case .requiresRecentSignIn:
             let msg = LocalizedString("This is a security sensitive action and requires a recent sign-in.", comment: "profile change error description")
             return msg
-        case .noSuchProvider(_):
+        case .noSuchProvider:
             let msg = LocalizedString("The provider is not linked.", comment: "profile change error description")
             return msg
         case .requiresAtLeastOneSignInMethod(let context):
@@ -132,10 +132,10 @@ extension ProfileChangeError: LocalizedError {
             let msgFormat = LocalizedString("You must have at least one sign-in method enabled. Please enable another sign-in method before unlinking your %@ account.", comment: "profile change error description")
             let msg = String(format: msgFormat, providerDescription)
             return msg
-        case .missingReauthenticationMethod(_):
+        case .missingReauthenticationMethod:
             let msg = LocalizedString("There are no reauthentication methods available to perform this action.", comment: "profile change error description")
             return msg
-        case .cancelledByUser(_):
+        case .cancelledByUser:
             let msg = LocalizedString("The profile change was cancelled by the user.", comment: "profile change error description")
             return msg
         case .other(let message, _):

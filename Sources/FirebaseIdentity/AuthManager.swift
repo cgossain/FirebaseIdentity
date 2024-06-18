@@ -528,17 +528,16 @@ public final class AuthManager {
     ) {
         if let error = error as NSError? {
             if error.code == AuthErrorCode.emailAlreadyInUse.rawValue, provider.providerID == .email {
-                // this error is only ever triggered when using the "createUserWithEmail" method
-                // in Firebase; in other words, this error is only triggered when the user tries
-                // to sign up for an email account
+                // this error is only ever triggered when using the `auth.createUser` method
+                // in Firebase
+                //
+                // in other words, this error is only triggered when the user tries
+                // to "sign up" for an email based account
                 let email = (provider as! EmailIdentityProvider).email
                 auth.fetchSignInMethods(forEmail: email) { (providers, fetchError) in
-                    // note that unless the email address passed to this method, we don't expect
-                    // to run into any errors (other than typical network connection errors)
-                    
                     // get all providers that are not the one that the user just tried authenticating with
-                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
-                        completion(.failure(.requiresAccountLinking(providers, context)))
+                    if let providers = providers?.compactMap(IdentityProviderID.init).filter({ $0 != provider.providerID }), !providers.isEmpty, fetchError == nil {
+                        completion(.failure(.requiresAccountLinking(email, providers, context)))
                     } else {
                         completion(.failure(.emailBasedAccountAlreadyExists(context)))
                     }
@@ -546,10 +545,6 @@ public final class AuthManager {
             } else if error.code == AuthErrorCode.wrongPassword.rawValue, provider.providerID == .email {
                 let email = (provider as! EmailIdentityProvider).email
                 auth.fetchSignInMethods(forEmail: email) { (providers, fetchError) in
-                    // note that unless the email address passed to this method was not provided by the
-                    // Firebase error, we don't expect to run into any errors (other than typical
-                    // network connection errors)
-                    
                     // get all providers that are not the one that the user just tried authenticating with
                     
                     // note this case is a little different from the other potential account linking scenarios
@@ -558,9 +553,9 @@ public final class AuthManager {
                     // even though there is no email based account, but there is an account linked to a third
                     // party auth provider that is using the same email) - this scenario can be identified by
                     // detecting the lack of an email based sign in method associated with this email account
-                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }), !providers.contains(.email) {
+                    if let providers = providers?.compactMap(IdentityProviderID.init), !providers.contains(.email), fetchError == nil {
                         let nonEmailProviders = providers.filter({ $0 != provider.providerID })
-                        completion(.failure(.requiresAccountLinking(nonEmailProviders, context)))
+                        completion(.failure(.requiresAccountLinking(email, nonEmailProviders, context)))
                     } else {
                         completion(.failure(.invalidEmailOrPassword(context)))
                     }
@@ -568,12 +563,9 @@ public final class AuthManager {
             } else if error.code == AuthErrorCode.accountExistsWithDifferentCredential.rawValue {
                 let email =  error.userInfo[AuthErrorUserInfoEmailKey] as! String
                 auth.fetchSignInMethods(forEmail: email) { (providers, fetchError) in
-                    // note that unless the email address passed to this method, we don't expect
-                    // to run into any errors (other than typical network connection errors)
-                    
                     // get all providers that are not the one that the user just tried authenticating with
-                    if let providers = providers?.compactMap({ IdentityProviderID(rawValue: $0) }).filter({ $0 != provider.providerID }), !providers.isEmpty {
-                        completion(.failure(.requiresAccountLinking(providers, context)))
+                    if let providers = providers?.compactMap(IdentityProviderID.init).filter({ $0 != provider.providerID }), !providers.isEmpty, fetchError == nil {
+                        completion(.failure(.requiresAccountLinking(email, providers, context)))
                     } else {
                         let msg = fetchError?.localizedDescription ?? "No error message provided. Account exists with different credential."
                         completion(.failure(.other(msg, context)))

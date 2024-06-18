@@ -26,21 +26,33 @@ import UIKit
 
 extension UIViewController {
     
-    /// Presents a simple alert with details of an `AuthenticationError`..
-    public func showAuthenticationErrorAlert(for error: AuthenticationError) {
-        let alert = UIAlertController(title: LocalizedString("Error", comment: "alert title"), message: error.localizedDescription, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: LocalizedString("OK", comment: "alert action title"), style: .default, handler: nil))
-        present(alert, animated: true, completion: nil)
+    /// Presents a simple alert with details of an `AuthenticationError`.
+    public func showAlertForAuthenticationError(_ authenticationError: AuthenticationError) {
+        let title: String
+        let msg: String
+        switch authenticationError {
+        case .requiresAccountLinking(let existingEmail, let existingProviders, let context):
+            title = LocalizedString("Account Exists", comment: "alert title")
+            let msgFmt = LocalizedString("It looks like we already have a user signed up as %@ via %@.", comment: "alert message")
+            msg = String(format: msgFmt, existingEmail, String(describing: existingProviders[0]))
+        default:
+            title = LocalizedString("Error", comment: "alert title")
+            msg = authenticationError.localizedDescription
+        }
+        
+        let alert = UIAlertController(title: title, message: msg, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: LocalizedString("OK", comment: "alert action title"), style: .default))
+        present(alert, animated: true)
     }
     
     /// Presents a simple alert with details of an `ProfileChangeError`.
-    public func showProfileChangeErrorAlert(for error: ProfileChangeError) {
-        switch error {
+    public func showAlertForProfileChangeError(_ profileChangeError: ProfileChangeError) {
+        switch profileChangeError {
         case .cancelledByUser:
             break
         default:
-            let alert = UIAlertController(title: LocalizedString("Error", comment: "alert title"), message: error.localizedDescription, preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: LocalizedString("OK", comment: "alert action title"), style: .default, handler: nil))
+            let alert = UIAlertController(title: LocalizedString("Error", comment: "alert title"), message: profileChangeError.localizedDescription, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: LocalizedString("OK", comment: "alert action title"), style: .default))
             present(alert, animated: true, completion: nil)
         }
     }
