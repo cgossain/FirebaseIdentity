@@ -43,7 +43,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     public let appleIDCredential: ASAuthorizationAppleIDCredential
     
     /// The nonce that was passed to Apple.
-    public let nonce: String?
+    public let nonce: String
     
     /// The JSON Web Token (JWT) serialized from the ASAuthorizationAppleIDCredential.
     public let identityToken: String
@@ -58,7 +58,7 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     /// - Throws: A SignInWithAppleIdentityProviderError error that explains why the initialization failed.
     public init(
         appleIDCredential: ASAuthorizationAppleIDCredential,
-        nonce: String?
+        nonce: String
     ) throws {
         guard let appleIDToken = appleIDCredential.identityToken else {
             print("Unable to fetch identity token")
@@ -160,11 +160,10 @@ public final class SignInWithAppleIdentityProvider: IdentityProviding {
     // MARK: - Private
     
     private var credential: OAuthCredential {
-        OAuthProvider
-            .credential(
-                withProviderID: providerID.rawValue,
-                idToken: identityToken,
-                rawNonce: nonce
-            )
+        OAuthProvider.credential(
+            withProviderID: providerID.rawValue,
+            idToken: identityToken,
+            rawNonce: nonce
+        )
     }
 }
