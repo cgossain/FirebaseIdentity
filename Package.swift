@@ -3,7 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "firebase-identity",
-    platforms: [.iOS(.v13)],
+    platforms: [
+        .macOS(.v14),
+        .iOS(.v13)
+    ],
     products: [
         .library(
             name: "FirebaseIdentity",
